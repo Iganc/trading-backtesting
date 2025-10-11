@@ -1,8 +1,7 @@
 from django.db import models
 
-# Create your models here.
 class SP500(models.Model):
-    date = models.DateField()
+    date = models.DateTimeField()
     open = models.FloatField()
     high = models.FloatField()
     low = models.FloatField()
