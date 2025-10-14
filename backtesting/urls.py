@@ -15,12 +15,9 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
-from backtest_app.views import SP500View
+from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('sp500/<str:date>/', SP500View.as_view(), name='SP500'),
-    path('sp500/period/<str:startdate>/<str:enddate>/', SP500View.as_view(), name='SP500')
+    path('', include('backtest_app.urls')),
 ]
-

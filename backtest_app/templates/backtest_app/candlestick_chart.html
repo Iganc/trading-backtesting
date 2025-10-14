@@ -1,0 +1,25 @@
+{% extends 'backtest_app/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ display_symbol }} Candlestick Chart{% endblock %}
+
+{% block extra_head %}
+    <style>
+        .chart { text-align: center; }
+        .info { background: #f0f0f0; padding: 10px; margin: 10px 0; }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <a href="/" class="home-link">Powrót do strony głównej</a>
+    <h1>{{ display_symbol }} Candlestick Chart</h1>
+    <div class="info">
+        <p>Symbol: <strong>{{ display_symbol }}</strong></p>
+        <p>Records: {{ data.count }}</p>
+        <p>Date range: {{ first_date }} to {{ last_date }}</p>
+    </div>
+    <div class="chart">
+        <img src="data:image/png;base64,{{ image_base64 }}" alt="{{ display_symbol }} Chart" style="max-width: 100%;">
+    </div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'backtest_app/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ display_symbol }} Interactive Chart{% endblock %}
+
+{% block extra_head %}
+    <style>
+        .info { 
+            background: #f0f0f0; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 5px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <a href="/" class="home-link">Powrót do strony głównej</a>
+    <h1>{{ display_symbol }} Multi-Timeframe Chart</h1>
+    <div class="info">
+        <p><strong>Symbol:</strong> {{ display_symbol }}</p>
+        <p><strong>Records:</strong> {{ count|intcomma }}</p>
+        <p><strong>Date Range:</strong> {{ first_date }} to {{ last_date }}</p>
+        <p><strong>Available Timeframes:</strong> 1m, 5m, 15m, 1h, 4h, 1d</p>
+        <p><strong>Instructions:</strong> Use the buttons above the chart to switch between timeframes</p>
+    </div>
+    {{ graph_html|safe }}
+{% endblock %}
