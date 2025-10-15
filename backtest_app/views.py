@@ -377,7 +377,26 @@ def home_view(request):
                 'latest_price': latest.close,
                 'total_records': TimeSeriesData.objects.filter(symbol=db_symbol).count()
             }
+    import random
+    start = earliest.date
+    end = latest.date
+    usable_range_start = start + timedelta(days=3)  
+    usable_range_end = end - timedelta(days=3) 
+    if usable_range_start <= usable_range_end:
+        # Losuj datę z użytecznego zakresu
+        random_timestamp = random.randint(
+            int(usable_range_start.timestamp()),
+            int(usable_range_end.timestamp())
+        )
+        random_date = datetime.fromtimestamp(random_timestamp).date()
+    else:
+        # Jeśli zakres jest zbyt mały, po prostu użyj środkowego punktu
+        middle_point = start + (end - start) / 2
+        random_date = middle_point.date()
     
+    # Stwórz zakres dat (+/- 3 dni)
+    random_date_from = random_date - timedelta(days=3)
+    random_date_to = random_date + timedelta(days=3)
     today = datetime.now().strftime('%Y-%m-%d')
     last_week = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
     last_month = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
@@ -388,7 +407,9 @@ def home_view(request):
         'today': today,
         'last_week': last_week,
         'last_month': last_month,
-        'last_year': last_year
+        'last_year': last_year,
+        'random_date_from': random_date_from.strftime('%Y-%m-%d'),
+        'random_date_to': random_date_to.strftime('%Y-%m-%d')
     }
     
     return render(request, 'backtest_app/home.html', context)

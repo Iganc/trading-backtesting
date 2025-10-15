@@ -6,6 +6,16 @@
 
 {% block extra_head %}
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow-x: hidden;
+        }
+        .chart-container {
+            width: 100%;
+            height: 70vh;
+        }
         .info { 
             background: #f0f0f0; 
             padding: 15px; 
@@ -16,6 +26,7 @@
 {% endblock %}
 
 {% block content %}
+<div class="chart-fullscreen">
     <a href="/" class="home-link">Powrót do strony głównej</a>
     <h1>{{ display_symbol }} Multi-Timeframe Chart</h1>
     <div class="info">
@@ -25,5 +36,8 @@
         <p><strong>Available Timeframes:</strong> 1m, 5m, 15m, 1h, 4h, 1d</p>
         <p><strong>Instructions:</strong> Use the buttons above the chart to switch between timeframes</p>
     </div>
-    {{ graph_html|safe }}
+    <div class="chart-container">
+        {{ graph_html|safe }}
+    </div>
+</div>
 {% endblock %}

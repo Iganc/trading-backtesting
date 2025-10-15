@@ -6,6 +6,8 @@
 
 {% block extra_head %}
     <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="{% static 'backtest_app/js/lightweight-charts-line-tools/dist/lightweight-charts-line-tools.js' %}"></script>
+    
     <style>
         html, body {
             height: 100%;
@@ -119,6 +121,12 @@
         <button class="timeframe-btn active" data-tf="1h">1h</button>
         <button class="timeframe-btn" data-tf="4h">4h</button>
         <button class="timeframe-btn" data-tf="1d">1d</button>
+    </div>
+    
+    <div class="tool-selector">
+        <button data-tool="FibRetracement">Fib Retracement</button>
+        <button data-tool="HorizontalRay">Horizontal Ray</button>
+        <button data-tool="ParallelChannel">Parallel Channel</button>
     </div>
 
 
@@ -319,6 +327,7 @@
             <div>${dateStr}</div>
         `;
     }
+
     // Funkcja do sprawdzania wymiarów kontenera
     function debugContainerSize() {
         const rect = chartContainer.getBoundingClientRect();
@@ -344,6 +353,5 @@
 
     // Wywołaj resize po załadowaniu
     resizeChart();
-
 </script>
 {% endblock %}
