@@ -42,6 +42,8 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
     </div>
     <div class="drawing-tools">
         <button id="line-tool" class="drawing-btn">Line Tool</button>
+        <button id="fib-tool" class="drawing-btn">Fibbonaci</button>
+        <button id="rect-tool" class="drawing-btn">Rectangle</button>
         <button id="clear-drawings" class="drawing-btn">Clear All</button>
     </div>
     <div class="chart-page">
@@ -140,7 +142,6 @@ document.querySelectorAll('.timeframe-btn').forEach(btn=>{
     btn.addEventListener('click',()=>{currentTimeframe=btn.dataset.tf; loadTimeframeData(currentTimeframe)});
 });
 
-// Resize
 function resizeChart() {
     chart.applyOptions({width:chartContainer.clientWidth,height:chartContainer.clientHeight});
 }
@@ -156,21 +157,27 @@ chart.subscribeCrosshairMove(param => {
 });
 
 
-// === Drawing tool (fixed for v5.0.9) ===
 let isDrawingMode = false;
+let isFibMode = false;
 let drawingPoints = [];
 let currentLine = null;
 let savedLines = [];
+let fibLines = [];
+let isShiftKeyPressed = false;
 
 const lineToolBtn = document.getElementById('line-tool');
+const fibToolBtn = document.getElementById('fib-tool');
 const clearDrawingsBtn = document.getElementById('clear-drawings');
-const rightScale = chart.priceScale('right');
 
 lineToolBtn.addEventListener('click', () => {
     isDrawingMode = !isDrawingMode;
     lineToolBtn.classList.toggle('active', isDrawingMode);
+    
+    isFibMode = false;
+    fibToolBtn.classList.remove('active');
+    
     chartContainer.style.cursor = isDrawingMode ? 'crosshair' : 'default';
-
+    
     if (!isDrawingMode && drawingPoints.length === 1) {
         drawingPoints = [];
         if (currentLine) {
@@ -180,18 +187,50 @@ lineToolBtn.addEventListener('click', () => {
     }
 });
 
+fibToolBtn.addEventListener('click', () => {
+    isFibMode = !isFibMode;
+    fibToolBtn.classList.toggle('active', isFibMode);
+    
+    isDrawingMode = false;
+    lineToolBtn.classList.remove('active');
+    
+    chartContainer.style.cursor = isFibMode ? 'crosshair' : 'default';
+    
+    if (currentLine) {
+        chart.removeSeries(currentLine);
+        currentLine = null;
+    }
+    drawingPoints = [];
+});
+
+
+document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Shift'){
+        isShiftKeyPressed = true;
+    }
+})
+
+document.addEventListener('keyup', (e)=>{
+    if (e.key === 'Shift'){
+        isShiftKeyPressed = false;
+    }
+})
+
 clearDrawingsBtn.addEventListener('click', () => {
     savedLines.forEach(l => chart.removeSeries(l));
     savedLines = [];
+    
+    fibLines.forEach(l => chart.removeSeries(l));
+    fibLines = [];
+    
     if (currentLine) {
         chart.removeSeries(currentLine);
         currentLine = null;
         drawingPoints = [];
     }
 });
-
 chartContainer.addEventListener('mousedown', e => {
-    if (!isDrawingMode) return;
+    if (!isDrawingMode && !isFibMode) return;
 
     const rect = chartContainer.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -206,29 +245,141 @@ chartContainer.addEventListener('mousedown', e => {
     }
 
     try {
-        if (drawingPoints.length === 0) {
-            drawingPoints.push({ time, price });
-            currentLine = chart.addSeries(LightweightCharts.LineSeries, {
-                color: '#ff5722',
-                lineWidth: 2,
-                lastValueVisible: false,
-                priceLineVisible: false
-            });
+        if (isDrawingMode) {
+            // Logika rysowania zwykłej linii
+            if (drawingPoints.length === 0) {
+                drawingPoints.push({ time, price });
+                currentLine = chart.addSeries(LightweightCharts.LineSeries, {
+                    color: '#ff5722',
+                    lineWidth: 2,
+                    lastValueVisible: false,
+                    priceLineVisible: false
+                });
 
-            currentLine.setData([{ time, value: price }, { time, value: price }]);
-        } else if (drawingPoints.length === 1) {
-            drawingPoints.push({ time, price });
-            currentLine.setData([
-                { time: drawingPoints[0].time, value: drawingPoints[0].price },
-                { time, value: price }
-            ]);
-            savedLines.push(currentLine);
-            drawingPoints = [];
-            currentLine = null;
+                currentLine.setData([
+                    { time: drawingPoints[0].time, value: drawingPoints[0].price },
+                    { time: drawingPoints[0].time, value: drawingPoints[0].price }
+                ]);
+            } else if (drawingPoints.length === 1) {
+                drawingPoints.push({ time, price });
+                if (currentLine) {
+                    chart.removeSeries(currentLine);
+                }
+                const newLine = chart.addSeries(LightweightCharts.LineSeries, {
+                    color: '#ff5722',
+                    lineWidth: 2,
+                    lastValueVisible: false,
+                    priceLineVisible: false
+                });
+                
+                // Sort points by time for the library (technical requirement)
+                const pointsForLibrary = [
+                    { time: drawingPoints[0].time, value: drawingPoints[0].price },
+                    { time: drawingPoints[1].time, value: drawingPoints[1].price }
+                ].sort((a, b) => a.time - b.time);
+                
+                newLine.setData(pointsForLibrary);
+                savedLines.push(newLine);
+                currentLine = null;
+                drawingPoints = [];
+            }
+        } else if (isFibMode) {
+            // Logika rysowania Fibonacci retracement
+            if (drawingPoints.length === 0) {
+                // Pierwszy punkt Fibonacciego
+                drawingPoints.push({ time, price });
+                currentLine = chart.addSeries(LightweightCharts.LineSeries, {
+                    color: '#2962FF',
+                    lineWidth: 2,
+                    lastValueVisible: false,
+                    priceLineVisible: false
+                });
+
+                currentLine.setData([
+                    { time: drawingPoints[0].time, value: drawingPoints[0].price },
+                    { time: drawingPoints[0].time, value: drawingPoints[0].price }
+                ]);
+            } else if (drawingPoints.length === 1) {
+                // Drugi punkt Fibonacciego - rysujemy poziomy
+                drawingPoints.push({ time, price });
+                
+                // Usuwamy linię pomocniczą
+                if (currentLine) {
+                    chart.removeSeries(currentLine);
+                    currentLine = null;
+                }
+                
+                const startPrice = drawingPoints[0].price;
+                const endPrice = drawingPoints[1].price;
+                const priceDiff = endPrice - startPrice;
+                
+                // Zdefiniowane poziomy Fibonacci
+                const fibLevels = [-0.5, 0, 0.5, 0.62, 0.705, 0.79, 1];
+                
+                // Rysujemy linie dla każdego poziomu
+                for (const level of fibLevels) {
+                    const fibPrice = startPrice + priceDiff * (1- level);
+                    
+                    // Tworzymy linię poziomą na poziomie Fib
+                    const fibLine = chart.addSeries(LightweightCharts.LineSeries, {
+                        color: level === 0 || level === 1 ? '#FF6D00' : '#2962FF',
+                        lineWidth: level === 0 || level === 1 ? 2 : 1,
+                        lastValueVisible: true,
+                        lastValueAlign: 'right',
+                        title: `Fib ${level}`,
+                        priceLineVisible: false
+                    });
+                    
+                    const visibleRange = chart.timeScale().getVisibleRange();
+                    let startTime, endTime;
+                    
+                    if (visibleRange) {
+                        startTime = visibleRange.from;
+                        endTime = visibleRange.to;
+                    } else {
+                        const sortedTimes = [drawingPoints[0].time, drawingPoints[1].time].sort((a, b) => a - b);
+                        startTime = sortedTimes[0];
+                        endTime = sortedTimes[1];
+                    }
+                    
+                    // Rysujemy linię na całym widocznym zakresie
+                    const sortedPoints = [
+                        { time: startTime, value: fibPrice },
+                        { time: endTime, value: fibPrice }
+                    ].sort((a, b) => a.time - b.time);
+                    
+                    fibLine.setData(sortedPoints);
+                    
+                    // Dodajemy etykietę z poziomem i ceną
+                    fibLine.applyOptions({
+                        lastValueText: `${level} (${fibPrice.toFixed(2)})`
+                    });
+                    
+                    fibLines.push(fibLine);
+                }
+                drawingPoints = [];
+                
+                // Rysujemy główną linię trendu
+                const trendLine = chart.addSeries(LightweightCharts.LineSeries, {
+                    color: '#FF6D00',
+                    lineWidth: 2,
+                    lastValueVisible: false,
+                    priceLineVisible: false
+                });
+                
+                const sortedPoints = [
+                    { time: drawingPoints[0].time, value: drawingPoints[0].price },
+                    { time: drawingPoints[1].time, value: drawingPoints[1].price }
+                ].sort((a, b) => a.time - b.time);
+                
+                trendLine.setData(sortedPoints);
+                fibLines.push(trendLine);
+                
+                drawingPoints = [];
+            }
         }
     } catch (err) {
-        console.error("Error during line draw:", err);
-        // jeśli coś się posypało — usuń linię, żeby nie zostawić zepsutej serii
+        console.error("Error during drawing:", err);
         if (currentLine) {
             chart.removeSeries(currentLine);
             currentLine = null;
@@ -237,9 +388,8 @@ chartContainer.addEventListener('mousedown', e => {
     }
 });
 
-
 chartContainer.addEventListener('mousemove', e => {
-    if (!isDrawingMode || drawingPoints.length !== 1 || !currentLine) return;
+    if ((!isDrawingMode && !isFibMode) || drawingPoints.length !== 1 || !currentLine) return;
 
     const rect = chartContainer.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -248,18 +398,48 @@ chartContainer.addEventListener('mousemove', e => {
     const time = chart.timeScale().coordinateToTime(x);
     const price = candleSeries.coordinateToPrice(y);
 
-    if (time == null || price == null) return; // zapobiega błędom
+    if (time == null || price == null) return;
 
     try {
-        currentLine.setData([
+        let finalTime = time;
+        let finalPrice = price;
+        
+        if (isShiftKeyPressed && isDrawingMode) {  // Stosujemy ograniczenie kąta tylko dla zwykłych linii
+            const startX = chart.timeScale().timeToCoordinate(drawingPoints[0].time);
+            const startY = candleSeries.priceToCoordinate(drawingPoints[0].price);
+            
+            if (startX !== null && startY !== null) {
+                const deltaX = x - startX;
+                const deltaY = y - startY;
+                
+                let angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+                angle = Math.round(angle / 45) * 45;
+                
+                const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                
+                const newEndX = startX + length * Math.cos(angle * Math.PI / 180);
+                const newEndY = startY + length * Math.sin(angle * Math.PI / 180);
+                
+                const newTime = chart.timeScale().coordinateToTime(newEndX);
+                const newPrice = candleSeries.coordinateToPrice(newEndY);
+                
+                if (newTime !== null && newPrice !== null) {
+                    finalTime = newTime;
+                    finalPrice = newPrice;
+                }
+            }
+        }
+        
+        const sortedPoints = [
             { time: drawingPoints[0].time, value: drawingPoints[0].price },
-            { time, value: price }
-        ]);
+            { time: finalTime, value: finalPrice }
+        ].sort((a, b) => a.time - b.time);
+        
+        currentLine.setData(sortedPoints);
     } catch (err) {
         console.error("Error updating line:", err);
     }
 });
-
 
 </script>
 {% endblock %}
