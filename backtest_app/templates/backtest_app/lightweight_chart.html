@@ -40,6 +40,10 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
         <button class="timeframe-btn" data-tf="4h">4h</button>
         <button class="timeframe-btn" data-tf="1d">1d</button>
     </div>
+    <div class="drawing-tools">
+        <button id="line-tool" class="drawing-btn">Line Tool</button>
+        <button id="clear-drawings" class="drawing-btn">Clear All</button>
+    </div>
     <div class="chart-page">
         <div id="chart-container">
             <div id="legend" class="legend"></div>
@@ -108,6 +112,9 @@ const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
     wickDownColor: '#ef5350'
 });
 
+
+
+
 function updateLegend(data) {
     if (!data) return;
     const dateStr = data.time ? new Date(data.time*1000).toLocaleString() : '';
@@ -147,5 +154,112 @@ chart.subscribeCrosshairMove(param => {
     const data = param.seriesPrices.get(candleSeries);
     if (data) updateLegend(data);
 });
+
+
+// === Drawing tool (fixed for v5.0.9) ===
+let isDrawingMode = false;
+let drawingPoints = [];
+let currentLine = null;
+let savedLines = [];
+
+const lineToolBtn = document.getElementById('line-tool');
+const clearDrawingsBtn = document.getElementById('clear-drawings');
+const rightScale = chart.priceScale('right');
+
+lineToolBtn.addEventListener('click', () => {
+    isDrawingMode = !isDrawingMode;
+    lineToolBtn.classList.toggle('active', isDrawingMode);
+    chartContainer.style.cursor = isDrawingMode ? 'crosshair' : 'default';
+
+    if (!isDrawingMode && drawingPoints.length === 1) {
+        drawingPoints = [];
+        if (currentLine) {
+            chart.removeSeries(currentLine);
+            currentLine = null;
+        }
+    }
+});
+
+clearDrawingsBtn.addEventListener('click', () => {
+    savedLines.forEach(l => chart.removeSeries(l));
+    savedLines = [];
+    if (currentLine) {
+        chart.removeSeries(currentLine);
+        currentLine = null;
+        drawingPoints = [];
+    }
+});
+
+chartContainer.addEventListener('mousedown', e => {
+    if (!isDrawingMode) return;
+
+    const rect = chartContainer.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const time = chart.timeScale().coordinateToTime(x);
+    const price = candleSeries.coordinateToPrice(y);
+
+    if (time == null || price == null) {
+        console.warn("Clicked outside valid chart area, ignoring.");
+        return;
+    }
+
+    try {
+        if (drawingPoints.length === 0) {
+            drawingPoints.push({ time, price });
+            currentLine = chart.addSeries(LightweightCharts.LineSeries, {
+                color: '#ff5722',
+                lineWidth: 2,
+                lastValueVisible: false,
+                priceLineVisible: false
+            });
+
+            currentLine.setData([{ time, value: price }, { time, value: price }]);
+        } else if (drawingPoints.length === 1) {
+            drawingPoints.push({ time, price });
+            currentLine.setData([
+                { time: drawingPoints[0].time, value: drawingPoints[0].price },
+                { time, value: price }
+            ]);
+            savedLines.push(currentLine);
+            drawingPoints = [];
+            currentLine = null;
+        }
+    } catch (err) {
+        console.error("Error during line draw:", err);
+        // jeśli coś się posypało — usuń linię, żeby nie zostawić zepsutej serii
+        if (currentLine) {
+            chart.removeSeries(currentLine);
+            currentLine = null;
+        }
+        drawingPoints = [];
+    }
+});
+
+
+chartContainer.addEventListener('mousemove', e => {
+    if (!isDrawingMode || drawingPoints.length !== 1 || !currentLine) return;
+
+    const rect = chartContainer.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const time = chart.timeScale().coordinateToTime(x);
+    const price = candleSeries.coordinateToPrice(y);
+
+    if (time == null || price == null) return; // zapobiega błędom
+
+    try {
+        currentLine.setData([
+            { time: drawingPoints[0].time, value: drawingPoints[0].price },
+            { time, value: price }
+        ]);
+    } catch (err) {
+        console.error("Error updating line:", err);
+    }
+});
+
+
 </script>
 {% endblock %}
