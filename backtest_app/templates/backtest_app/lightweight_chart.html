@@ -5,113 +5,33 @@
 {% block title %}{{ display_symbol }} Chart{% endblock %}
 
 {% block extra_head %}
-    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
-    <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-        
-        .chart-fullscreen {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-        
-        .chart-page {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-            min-height: 0;
-            height: 100%; 
-        }
-        
-        #chart-container {
-            flex: 1;
-            position: relative;
-            width: 100%;
-            min-height: 400px; /* Minimalna wysokość */
-        }
-        
-        .legend {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            z-index: 10;
-        }
-        
-        .info { 
-            background: #f0f0f0; 
-            padding: 15px; 
-            margin: 10px 0; 
-            border-radius: 5px;
-        }
-        .info-overlay {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: rgba(255, 255, 255, 0.85);
-            padding: 8px 15px;
-            margin: 10px;
-            border-radius: 5px;
-            z-index: 20; /* Nad wykresem */
-            font-size: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            max-width: 70%;
-        }
-        
-        /* Bardziej kompaktowy wygląd */
-        .info-overlay p {
-            margin: 3px 0;
-            display: inline-block;
-            margin-right: 15px;
-        }
-        
-        .timeframe-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        
-        .timeframe-btn {
-            padding: 8px 16px;
-            background: #e0e0e0;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        
-        .timeframe-btn.active {
-            background: #007bff;
-            color: white;
-        }
-    </style>
+<script src="https://unpkg.com/lightweight-charts@5.0.9/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+html, body { height:100%; margin:0; padding:0; overflow:hidden; }
+.chart-fullscreen { width:100%; height:100vh; display:flex; flex-direction:column; padding:10px; box-sizing:border-box; }
+.chart-page { display:flex; flex-direction:column; flex:1; min-height:0; height:100%; }
+#chart-container { flex:1; position:relative; width:100%; min-height:400px; cursor:crosshair; }
+.legend { position:absolute; top:10px; right:10px; background:rgba(255,255,255,0.8); padding:8px; border-radius:4px; font-size:12px; z-index:10; }
+.info-overlay { position:absolute; top:0; right:0; background:rgba(255,255,255,0.85); padding:8px 15px; margin:10px; border-radius:5px; z-index:20; font-size:12px; box-shadow:0 2px 5px rgba(0,0,0,0.1); max-width:70%; }
+.info-overlay p { margin:3px 0; display:inline-block; margin-right:15px; }
+.timeframe-buttons { display:flex; gap:10px; margin-bottom:10px; }
+.timeframe-btn { padding:8px 16px; background:#e0e0e0; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }
+.timeframe-btn.active { background:#007bff; color:white; }
+.drawing-tools { display:flex; gap:10px; margin-bottom:10px; }
+.drawing-btn { padding:8px 16px; background:#e0e0e0; border:none; border-radius:4px; cursor:pointer; }
+.drawing-btn.active { background:#ff7043; color:white; }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="chart-fullscreen">
-    
     <div id="info" class="info-overlay">
         <p><strong>Symbol:</strong> {{ display_symbol }}</p>
         <p><strong>Date Range:</strong> {{ start_date }} to {{ end_date }}</p>
     </div>
-    
     {% if data_warning %}
-    <div class="warning">
-        <strong>Uwaga:</strong> {{ data_warning }}
-    </div>
+    <div class="warning"><strong>Uwaga:</strong> {{ data_warning }}</div>
     {% endif %}
-    
     <div class="timeframe-buttons">
         <button class="timeframe-btn" data-tf="1m">1m</button>
         <button class="timeframe-btn" data-tf="5m">5m</button>
@@ -120,230 +40,112 @@
         <button class="timeframe-btn" data-tf="4h">4h</button>
         <button class="timeframe-btn" data-tf="1d">1d</button>
     </div>
-
-
     <div class="chart-page">
-        <div id="chart-container" class="chart-container">
+        <div id="chart-container">
             <div id="legend" class="legend"></div>
         </div>
     </div>
-
     {% if debug %}
-    <div style="margin-top: 30px; padding: 15px; background-color: #f5f5f5; border: 1px solid #ddd;">
+    <div style="margin-top:30px; padding:15px; background-color:#f5f5f5; border:1px solid #ddd;">
         <h3>Debug Info:</h3>
         <p>Display Symbol: {{ display_symbol }}</p>
         <p>Count: {{ count }}</p>
         <p>Chart Data Length (JSON): {{ chart_data|length }} bytes</p>
-        <pre style="max-height: 200px; overflow: auto; background: #eee; padding: 10px;">{{ chart_data|slice:":500" }}...</pre>
+        <pre style="max-height:200px; overflow:auto; background:#eee; padding:10px;">{{ chart_data|slice:":500" }}...</pre>
     </div>
     {% endif %}
 </div>
 {% endblock %}
+
 {% block scripts %}
 <script>
-    // Dane z serwera
-    console.log("Template loaded");
-    
-    // Wczytywanie i parsowanie danych
-    let chartData;
-    try {
-        console.log("Raw chart_data length:", '{{ chart_data|escapejs }}'.length);
-        chartData = JSON.parse('{{ chart_data|escapejs }}');
-        console.log("Chart data parsed successfully:", Object.keys(chartData));
-        console.log("Timeframes available:", Object.keys(chartData));
-        console.log("Sample data points in 1h:", chartData['1h'] ? chartData['1h'].length : 'N/A');
-    } catch (error) {
-        console.error("Błąd parsowania danych JSON:", error);
-        console.error("Raw data preview:", '{{ chart_data|escapejs }}'.substring(0, 100) + '...');
-        chartData = {};
-    }
+console.log("Template loaded");
 
-    console.log("LightweightCharts loaded:", typeof LightweightCharts !== 'undefined');
-    
-    // Elementy DOM
-    const chartContainer = document.getElementById('chart-container');
-    const legendElement = document.getElementById('legend');
-    
-    // Wybór domyślnego timeframe'a - definiujemy wcześniej
-    let currentTimeframe = '1h';
-    
-    // Przygotowanie danych do wykresu świecowego
-    function prepareCandleData(data) {
-        return data.map(item => ({
-            time: item.time,
-            open: item.open,
-            high: item.high,
-            low: item.low,
-            close: item.close,
-        }));
-    }
-    
-    // Konfiguracja wykresu
-    const chartOptions = {
-        layout: {
-            background: { color: '#ffffff' },
-            textColor: '#333',
-        },
-        grid: {
-            vertLines: { color: '#f0f0f0' },
-            horzLines: { color: '#f0f0f0' },
-        },
-        crosshair: {
-            mode: LightweightCharts.CrosshairMode.Normal,
-        },
-        rightPriceScale: {
-            borderColor: '#d1d4dc',
-        },
-        timeScale: {
-            borderColor: '#d1d4dc',
-            timeVisible: true,
-            secondsVisible: false,
-        },
-        handleScroll: {
-            vertTouchDrag: false,
-        },
-    };
-    
-    // Tworzenie wykresu
-    const chart = LightweightCharts.createChart(chartContainer, chartOptions);
-    
-    // Dodawanie serii danych do wykresu
-    const candleSeries = chart.addCandlestickSeries({
-        upColor: '#26a69a',
-        downColor: '#ef5350',
-        borderVisible: false,
-        wickUpColor: '#26a69a',
-        wickDownColor: '#ef5350'
-    });
-    
-    // Funkcja do ładowania danych dla wybranego timeframe'a
-    function loadTimeframeData(timeframe) {
-        const tfData = chartData[timeframe] || [];
-        
-        if (tfData.length === 0) {
-            alert('Brak danych dla wybranego timeframe\'a');
-            return;
-        }
-        
-        candleSeries.setData(prepareCandleData(tfData));
-        
-        // Uaktualnienie legendy
-        updateLegend(tfData[tfData.length - 1]);
-        
-        // Zaznaczenie aktywnego przycisku
-        document.querySelectorAll('.timeframe-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`.timeframe-btn[data-tf="${timeframe}"]`).classList.add('active');
-        
-        // Przewinięcie do odpowiedniego zakresu dat
-        const visibleRange = Math.min(100, tfData.length);
-        chart.timeScale().setVisibleRange({
-            from: tfData[Math.max(0, tfData.length - visibleRange)].time,
-            to: tfData[tfData.length - 1].time
-        });
-    }
-    
-    // Dynamiczna zmiana rozmiaru wykresu
-    function resizeChart() {
-        const chartContainerRect = chartContainer.getBoundingClientRect();
-        chart.applyOptions({
-            width: chartContainerRect.width,
-            height: chartContainerRect.height
-        });
-        
-        // Dostosuj zakres czasowy po zmianie rozmiaru
-        if (chartData[currentTimeframe] && chartData[currentTimeframe].length > 0) {
-            const visibleRange = Math.min(100, chartData[currentTimeframe].length);
-            chart.timeScale().setVisibleRange({
-                from: chartData[currentTimeframe][Math.max(0, chartData[currentTimeframe].length - visibleRange)].time,
-                to: chartData[currentTimeframe][chartData[currentTimeframe].length - 1].time
-            });
-        }
-    }
+// Parse data from server
+let chartData;
+try {
+    chartData = JSON.parse('{{ chart_data|escapejs }}');
+    console.log("Chart data parsed:", Object.keys(chartData));
+} catch(e) {
+    console.error("JSON parse error:", e);
+    chartData = {};
+}
 
-    // Dodaj obsługę zmiany rozmiaru przy załadowaniu strony
-    window.addEventListener('load', resizeChart);
-    window.addEventListener('resize', resizeChart);
-    
-    // WAŻNE: Załaduj dane dopiero teraz, gdy candleSeries jest zdefiniowany
-    loadTimeframeData(currentTimeframe);
-    
-    // Dodanie nasłuchiwania na przyciski timeframe
-    document.querySelectorAll('.timeframe-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const timeframe = this.getAttribute('data-tf');
-            currentTimeframe = timeframe;
-            loadTimeframeData(timeframe);
-        });
-    });
-    
-    // Uaktualnienie legendy przy poruszaniu kursorem
-    chart.subscribeCrosshairMove(param => {
-        if (
-            param.point === undefined || 
-            !param.time || 
-            param.point.x < 0 || 
-            param.point.x > chartContainer.clientWidth || 
-            param.point.y < 0 || 
-            param.point.y > chartContainer.clientHeight
-        ) {
-            // Poza wykresem - pokaż ostatnią wartość
-            const lastData = chartData[currentTimeframe][chartData[currentTimeframe].length - 1];
-            updateLegend(lastData);
-        } else {
-            // Na wykresie - pokaż wartość pod kursorem
-            const data = param.seriesPrices.get(candleSeries);
-            if (data) {
-                updateLegend(data);
-            }
-        }
-    });
-    
-    // Aktualizacja legendy
-    function updateLegend(data) {
-        if (!data) return;
-        
-        // Formatowanie daty
-        let dateStr = '';
-        if (data.time) {
-            const date = new Date(data.time * 1000);
-            dateStr = date.toLocaleString();
-        }
-        
-        legendElement.innerHTML = `
-            <div>O: <strong>${data.open.toFixed(2)}</strong></div>
-            <div>H: <strong>${data.high.toFixed(2)}</strong></div>
-            <div>L: <strong>${data.low.toFixed(2)}</strong></div>
-            <div>C: <strong>${data.close.toFixed(2)}</strong></div>
-            <div>${dateStr}</div>
-        `;
-    }
-    // Funkcja do sprawdzania wymiarów kontenera
-    function debugContainerSize() {
-        const rect = chartContainer.getBoundingClientRect();
-        console.log("Chart container dimensions:", {
-            width: rect.width,
-            height: rect.height,
-            top: rect.top,
-            left: rect.left,
-            container: chartContainer
-        });
-        
-        if (rect.height < 10 || rect.width < 10) {
-            console.error("PROBLEM: Kontener wykresu ma zerowy rozmiar!");
-            // Wymuszenie wysokości
-            chartContainer.style.height = "600px";
-            chartContainer.style.width = "100%";
-            setTimeout(resizeChart, 100);
-        }
-    }
-    
-    // Wywołaj funkcję debugowania po załadowaniu strony
-    window.addEventListener('load', debugContainerSize);
+// DOM
+const chartContainer = document.getElementById('chart-container');
+const legendElement = document.getElementById('legend');
+let currentTimeframe = '1h';
 
-    // Wywołaj resize po załadowaniu
+function prepareCandleData(data) {
+    return data.map(d => ({
+        time: Number(d.time),
+        open: d.open,
+        high: d.high,
+        low: d.low,
+        close: d.close
+    }));
+}
+
+// Chart config
+const chartOptions = {
+    layout: { background:{color:'#fff'}, textColor:'#333' },
+    grid: { vertLines:{color:'#f0f0f0'}, horzLines:{color:'#f0f0f0'} },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    rightPriceScale: { borderColor:'#d1d4dc' },
+    timeScale: { borderColor:'#d1d4dc', timeVisible:true, secondsVisible:false },
+    handleScroll: { vertTouchDrag:false },
+};
+
+
+const chart = LightweightCharts.createChart(chartContainer, chartOptions);
+
+// Dodanie świec
+const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
+    upColor: '#26a69a',
+    downColor: '#ef5350',
+    borderVisible: false,
+    wickUpColor: '#26a69a',
+    wickDownColor: '#ef5350'
+});
+
+function updateLegend(data) {
+    if (!data) return;
+    const dateStr = data.time ? new Date(data.time*1000).toLocaleString() : '';
+    legendElement.innerHTML = `
+        <div>O: <strong>${data.open.toFixed(2)}</strong></div>
+        <div>H: <strong>${data.high.toFixed(2)}</strong></div>
+        <div>L: <strong>${data.low.toFixed(2)}</strong></div>
+        <div>C: <strong>${data.close.toFixed(2)}</strong></div>
+        <div>${dateStr}</div>
+    `;
+}
+
+function loadTimeframeData(tf) {
+    const tfData = chartData[tf] || [];
+    if (!tfData.length) { alert('Brak danych dla tego timeframe'); return; }
+    candleSeries.setData(prepareCandleData(tfData));
+    updateLegend(tfData[tfData.length-1]);
+    document.querySelectorAll('.timeframe-btn').forEach(btn=>btn.classList.remove('active'));
+    document.querySelector(`.timeframe-btn[data-tf="${tf}"]`)?.classList.add('active');
+}
+
+document.querySelectorAll('.timeframe-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{currentTimeframe=btn.dataset.tf; loadTimeframeData(currentTimeframe)});
+});
+
+// Resize
+function resizeChart() {
+    chart.applyOptions({width:chartContainer.clientWidth,height:chartContainer.clientHeight});
+}
+window.addEventListener('resize', resizeChart);
+window.addEventListener('load', ()=>{
     resizeChart();
-
+    loadTimeframeData(currentTimeframe);
+});
+chart.subscribeCrosshairMove(param => {
+    if (!param.seriesPrices) return;
+    const data = param.seriesPrices.get(candleSeries);
+    if (data) updateLegend(data);
+});
 </script>
 {% endblock %}
