@@ -48,6 +48,13 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
         <button id="rect-tool" class="drawing-btn">Rectangle</button>
         <button id="clear-drawings" class="drawing-btn">Clear All</button>
     </div>
+    <div id="bar-replay-controls" style="gap:10px; margin:10px 0;">
+      <button id="bar-replay-prev">◀</button>
+      <button id="bar-replay-next">▶</button>
+      <button id="bar-replay-fast">+5</button>
+      <button id="bar-replay-reset">Reset</button>
+      <span id="bar-replay-status"></span>
+    </div>
     <div class="chart-page">
         <div id="chart-container">
             <div id="legend" class="legend"></div>
@@ -163,4 +170,5 @@ window.chart = chart;
 
 </script>
 <script src="{% static 'backtest_app/chart-tools.js' %}"></script>
+<script src="{% static 'backtest_app/bar-replay.js' %}"></script>
 {% endblock %}
