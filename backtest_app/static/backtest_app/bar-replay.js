@@ -17,8 +17,10 @@ function getCurrentCandles() {
     return [];
 }
 
-let replayIndex = 1;
+// Przechowujemy poprzedni TF globalnie
+let prevTimeframe = getCurrentTimeframe();
 
+// Funkcja inicjalizująca replayIndex
 function getInitialReplayIndex() {
     const tf = getCurrentTimeframe();
     const candles = getCurrentCandles();
@@ -37,7 +39,7 @@ function getInitialReplayIndex() {
     return Math.min(barsFor4h, candles.length);
 }
 
-replayIndex = getInitialReplayIndex();
+let replayIndex = getInitialReplayIndex();
 
 function updateBarReplay() {
     const candles = getCurrentCandles();
@@ -46,13 +48,12 @@ function updateBarReplay() {
     // Zabezpieczenie zakresu
     replayIndex = Math.max(1, Math.min(replayIndex, candles.length));
 
-    // Zawsze pokazujemy 20 "niewidzialnych" świec naprzód
+    // Pokazujemy replayIndex świeczek + 20 „niewidzialnych”
     const visibleCount = replayIndex;
     const totalCount = Math.min(candles.length, visibleCount + 20);
 
     const displayCandles = candles.slice(0, totalCount).map((c, i) => {
         if (i >= visibleCount) {
-            // ukryte świeczki
             return {
                 ...c,
                 open: NaN,
@@ -76,6 +77,7 @@ function updateBarReplay() {
     }
 }
 
+// Przyciski sterujące
 document.getElementById('bar-replay-prev').addEventListener('click', () => {
     replayIndex--;
     updateBarReplay();
@@ -93,10 +95,25 @@ document.getElementById('bar-replay-reset').addEventListener('click', () => {
     updateBarReplay();
 });
 
+// Obsługa zmiany timeframe
 document.querySelectorAll('.timeframe-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-        setTimeout(() => { 
-            replayIndex = getInitialReplayIndex();
+        setTimeout(() => {
+            const newTf = btn.dataset.tf;
+            const tfMinutes = { '1m':1,'5m':5,'15m':15,'1h':60,'4h':240,'1d':1440 };
+            const oldMinutes = tfMinutes[prevTimeframe] || 1;
+            const newMinutes = tfMinutes[newTf] || 1;
+
+            const candles = getCurrentCandles();
+            if (candles.length) {
+                // przeliczamy replayIndex proporcjonalnie do nowego TF
+                replayIndex = Math.round(replayIndex * oldMinutes / newMinutes);
+                replayIndex = Math.min(replayIndex, candles.length);
+            } else {
+                replayIndex = 1;
+            }
+
+            prevTimeframe = newTf;
             updateBarReplay();
         }, 0);
     });

@@ -18,56 +18,75 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
 .timeframe-btn { padding:8px 16px; background:#e0e0e0; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }
 .timeframe-btn.active { background:#007bff; color:white; }
 .drawing-tools { display:flex; flex-direction:column; gap:10px; }
-.drawing-btn { padding:8px 16px; background:#e0e0e0; border:none; border-radius:4px; cursor:pointer; }
+.drawing-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background: #e0e0e0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 .drawing-btn.active { background:#ff7043; color:white; }
 </style>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
 <div class="chart-fullscreen">
-    <div class="chart-layout">
-        <div class="sidebar">
-            <div class="drawing-tools">
-                <button id="long-tool" class="drawing-btn">Long</button>
-                <button id="short-tool" class="drawing-btn">Short</button>
-                <button id="line-tool" class="drawing-btn">Line</button>
-                <button id="fib-tool" class="drawing-btn">Fib</button>
-                <button id="rect-tool" class="drawing-btn">Rect</button>
-                <button id="clear-drawings" class="drawing-btn">Clear</button>
-                <button id="magnet-tool" class="drawing-btn">Magnes</button>
-            </div>
-            <div id="bar-replay-controls" style="gap:10px; margin-top:20px;">
-                <button id="bar-replay-prev">◀</button>
-                <button id="bar-replay-next">▶</button>
-                <button id="bar-replay-fast">+5</button>
-                <button id="bar-replay-reset">Reset</button>
-                <span id="bar-replay-status"></span>
-            </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div class="timeframe-buttons" style="display: flex; gap: 10px;">
+            <button class="timeframe-btn" data-tf="1m">1m</button>
+            <button class="timeframe-btn" data-tf="5m">5m</button>
+            <button class="timeframe-btn" data-tf="15m">15m</button>
+            <button class="timeframe-btn active" data-tf="1h">1h</button>
+            <button class="timeframe-btn" data-tf="4h">4h</button>
+            <button class="timeframe-btn" data-tf="1d">1d</button>
         </div>
-        <div class="main-chart">
-            <div class="timeframe-buttons">
-                <button class="timeframe-btn" data-tf="1m">1m</button>
-                <button class="timeframe-btn" data-tf="5m">5m</button>
-                <button class="timeframe-btn" data-tf="15m">15m</button>
-                <button class="timeframe-btn active" data-tf="1h">1h</button>
-                <button class="timeframe-btn" data-tf="4h">4h</button>
-                <button class="timeframe-btn" data-tf="1d">1d</button>
-            </div>
+        <div id="bar-replay-controls" style="display: flex; gap: 10px;">
+            <button id="bar-replay-prev">◀</button>
+            <button id="bar-replay-next">▶</button>
+            <button id="bar-replay-fast">+5</button>
+            <button id="bar-replay-reset">Reset</button>
+            <span id="bar-replay-status"></span>
+        </div>
+    </div>
+    <div class="chart-layout" style="display:flex; flex-direction:row; height:100%;">
+        <div class="drawing-tools" style="min-width:60px; align-items:center;">
+            <button id="long-tool" class="drawing-btn" title="Long">
+                <span class="material-icons">north_east</span>
+            </button>
+            <button id="short-tool" class="drawing-btn" title="Short">
+                <span class="material-icons">south_east</span>
+            </button>
+            <button id="line-tool" class="drawing-btn" title="Line">
+                <span class="material-icons">show_chart</span>
+            </button>
+            <button id="fib-tool" class="drawing-btn" title="Fib">
+                <span class="material-icons">timeline</span>
+            </button>
+            <button id="rect-tool" class="drawing-btn" title="Rect">
+                <span class="material-icons">crop_square</span>
+            </button>
+            <button id="clear-drawings" class="drawing-btn" title="Clear">
+                <span class="material-icons">clear</span>
+            </button>
+            <button id="magnet-tool" class="drawing-btn" title="Magnes">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <rect x="7" y="2" width="10" height="20" rx="5" fill="#333"/>
+                    <rect x="9" y="4" width="6" height="8" rx="3" fill="#ff7043"/>
+                </svg>
+            </button>
+        </div>
+        <div class="main-chart" style="flex:1; display:flex; flex-direction:column; min-height:0;">
             <div id="chart-container">
                 <div id="legend" class="legend"></div>
             </div>
         </div>
     </div>
-
-    {% if debug %}
-    <div style="margin-top:30px; padding:15px; background-color:#f5f5f5; border:1px solid #ddd;">
-        <h3>Debug Info:</h3>
-        <p>Display Symbol: {{ display_symbol }}</p>
-        <p>Count: {{ count }}</p>
-        <p>Chart Data Length (JSON): {{ chart_data|length }} bytes</p>
-        <pre style="max-height:200px; overflow:auto; background:#eee; padding:10px;">{{ chart_data|slice:":500" }}...</pre>
-    </div>
-    {% endif %}
 </div>
 {% endblock %}
 
