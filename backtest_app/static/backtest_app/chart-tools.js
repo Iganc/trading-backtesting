@@ -13,6 +13,7 @@ let isShiftKeyPressed = false;
 let isLongMode = false;
 let isShortMode = false;
 let candles = window.candles || [];
+let isMagnetMode = false;
 window.addEventListener('candlesUpdated', () => {
     candles = window.candles || [];
 });
@@ -35,6 +36,7 @@ const lineToolBtn = document.getElementById('line-tool');
 const fibToolBtn = document.getElementById('fib-tool');
 const rectToolBtn = document.getElementById('rect-tool');
 const clearDrawingsBtn = document.getElementById('clear-drawings');
+const magnetToolBtn = document.getElementById('magnet-tool');
 
 // --- helpery konwersji ---
 function clientXYToChartTimePrice(clientX, clientY) {
@@ -176,7 +178,29 @@ function removePositionSeries(pos) {
         // ignore
     }
 }
+function snapPriceToCandleLevels(time, price) {
+    if (!isMagnetMode || !candles || !candles.length) return price;
+    // znajdź świeczkę o tym czasie
+    const candle = candles.find(c => getTimeValue(c.time) === getTimeValue(time));
+    if (!candle) return price;
+    const levels = [candle.open, candle.close, candle.high, candle.low];
+    // znajdź najbliższy poziom
+    let closest = levels[0];
+    let minDist = Math.abs(price - closest);
+    for (const lvl of levels) {
+        const dist = Math.abs(price - lvl);
+        if (dist < minDist) {
+            closest = lvl;
+            minDist = dist;
+        }
+    }
+    return closest;
+}
 
+magnetToolBtn.addEventListener('click', () => {
+    isMagnetMode = !isMagnetMode;
+    magnetToolBtn.classList.toggle('active', isMagnetMode);
+});
 // --- toggle przycisków ---
 longToolBtn.addEventListener('click', () => {
     removeActive();
@@ -423,6 +447,8 @@ chartContainer.addEventListener('mousedown', e => {
     if (!isDrawingMode && !isFibMode && !isRectMode && !isLongMode && !isShortMode) return;
 
     const { time, price, x, y } = clientXYToChartTimePrice(e.clientX, e.clientY);
+    const snappedPrice = snapPriceToCandleLevels(time, price);
+
     if (time == null || price == null) {
         console.warn("Clicked outside valid chart area, ignoring.");
         return;
@@ -431,7 +457,7 @@ chartContainer.addEventListener('mousedown', e => {
     try {
         if (isLongMode || isShortMode) {
             const entryTime = time;
-            const entryPrice = price;
+            const entryPrice = snappedPrice;
 
             const defaultDelta = Math.abs(entryPrice) * 0.002;
             let slPrice, tpPrice;
@@ -457,7 +483,7 @@ chartContainer.addEventListener('mousedown', e => {
             const color = isLongMode ? '#00f2ffff' : '#ff0400ff';
             const thin = isLongMode ? '#37ff00ff' : '#ff00d0ff';
 
-            // areaSeries (tło) - pokazuje cały zakres od min to max pomiędzy minP,maxP
+            // areaSeries (tło) - pokazuje cały zakres od min do max pomiędzy minP,maxP
             const areaSeries = chart.addSeries(LightweightCharts.AreaSeries, {
                 topColor: isLongMode ? 'rgba(139,195,74,0.12)' : 'rgba(239,83,80,0.12)',
                 bottomColor: isLongMode ? 'rgba(139,195,74,0.08)' : 'rgba(239,83,80,0.08)',
@@ -510,7 +536,7 @@ chartContainer.addEventListener('mousedown', e => {
         } else if (isDrawingMode) {
             // rysowanie linii - twoja istniejąca logika
             if (drawingPoints.length === 0) {
-                drawingPoints.push({ time, price });
+                drawingPoints.push({ time, price: snappedPrice });
                 currentLine = chart.addSeries(LightweightCharts.LineSeries, {
                     color: '#2196F3',
                     lineWidth: 2,
@@ -524,7 +550,7 @@ chartContainer.addEventListener('mousedown', e => {
                 ]);
             } else if (drawingPoints.length === 1) {
                 let finalTime = time;
-                let finalPrice = price;
+                let finalPrice = snappedPrice;
                 if (isShiftKeyPressed) {
                     const startX = chart.timeScale().timeToCoordinate(drawingPoints[0].time);
                     const startY = candleSeries.priceToCoordinate(drawingPoints[0].price);
@@ -540,7 +566,7 @@ chartContainer.addEventListener('mousedown', e => {
                         const newPrice = candleSeries.coordinateToPrice(newEndY);
                         if (newTime !== null && newPrice !== null) {
                             finalTime = newTime;
-                            finalPrice = newPrice;
+                            finalPrice = snapPriceToCandleLevels(finalTime, newPrice);
                         }
                     }
                 }
@@ -565,9 +591,9 @@ chartContainer.addEventListener('mousedown', e => {
                 removeActive();
             }
         } else if (isFibMode) {
-            // fibo logic (bez zmian)
+            // fibo logic (bez zmian poza snap przy zapisie punktów)
             if (drawingPoints.length === 0) {
-                drawingPoints.push({ time, price });
+                drawingPoints.push({ time, price: snappedPrice });
                 currentLine = chart.addSeries(LightweightCharts.LineSeries, {
                     color: '#2962FF',
                     lineWidth: 2,
@@ -579,7 +605,7 @@ chartContainer.addEventListener('mousedown', e => {
                     { time: drawingPoints[0].time, value: drawingPoints[0].price }
                 ]);
             } else if (drawingPoints.length === 1) {
-                drawingPoints.push({ time, price });
+                drawingPoints.push({ time, price: snappedPrice });
                 if (currentLine) {
                     try { chart.removeSeries(currentLine); } catch (error) {}
                     currentLine = null;
@@ -634,9 +660,9 @@ chartContainer.addEventListener('mousedown', e => {
                 removeActive();
             }
         } else if (isRectMode) {
-            // prostokąty (bez zmian)
+            // prostokąty (bez zmian poza snap przy zapisie punktów)
             if (drawingPoints.length === 0) {
-                drawingPoints.push({ time, price });
+                drawingPoints.push({ time, price: snappedPrice });
                 currentLine = chart.addSeries(LightweightCharts.LineSeries, {
                     color: '#2196F3',
                     lineWidth: 2,
@@ -648,7 +674,7 @@ chartContainer.addEventListener('mousedown', e => {
                     { time: drawingPoints[0].time, value: drawingPoints[0].price }
                 ]);
             } else if (drawingPoints.length === 1) {
-                drawingPoints.push({ time, price });
+                drawingPoints.push({ time, price: snappedPrice });
 
                 const t0 = drawingPoints[0].time;
                 const t1 = drawingPoints[1].time;
@@ -761,6 +787,7 @@ chartContainer.addEventListener('mousemove', e => {
 
     if (isDragging && dragInfo) {
         const { time, price } = clientXYToChartTimePrice(e.clientX, e.clientY);
+        const snappedPrice = snapPriceToCandleLevels(time, price);
         if (time == null || price == null) return;
 
         const arr = dragInfo.side === 'long' ? longPositions : shortPositions;
@@ -769,14 +796,14 @@ chartContainer.addEventListener('mousemove', e => {
 
         try {
             if (dragInfo.type === 'tp') {
-                p.tpPrice = price;
+                p.tpPrice = snappedPrice;
             } else if (dragInfo.type === 'sl') {
-                p.slPrice = price;
+                p.slPrice = snappedPrice;
             } else if (dragInfo.type === 'entry') {
-                p.entryPrice = price;
+                p.entryPrice = snappedPrice;
             } else if (dragInfo.type === 'move') {
                 // Przesuwanie w pionie (cena)
-                const deltaPrice = price - dragInfo.startEntryPrice;
+                const deltaPrice = snappedPrice - dragInfo.startEntryPrice;
             
                 // Przesuwanie w poziomie (czas) - snap do świeczek!
                 const rect = chartContainer.getBoundingClientRect();
@@ -830,12 +857,13 @@ chartContainer.addEventListener('mousemove', e => {
 
     const time = snapTimeToCandle(chart.timeScale().coordinateToTime(x));
     const price = candleSeries.coordinateToPrice(y);
+    const snappedPrice = snapPriceToCandleLevels(time, price);
 
     if (time == null || price == null) return;
 
     try {
         let finalTime = time;
-        let finalPrice = price;
+        let finalPrice = snappedPrice;
 
         if (isShiftKeyPressed) {
             const startX = chart.timeScale().timeToCoordinate(drawingPoints[0].time);
@@ -854,7 +882,7 @@ chartContainer.addEventListener('mousemove', e => {
                     const newPrice = candleSeries.coordinateToPrice(newEndY);
                     if (newTime !== null && newPrice !== null) {
                         finalTime = newTime;
-                        finalPrice = newPrice;
+                        finalPrice = snapPriceToCandleLevels(finalTime, newPrice);
                     }
                 } else if (isRectMode) {
                     const deltaX = x - startX;
@@ -866,7 +894,7 @@ chartContainer.addEventListener('mousemove', e => {
                     const newPrice = candleSeries.coordinateToPrice(newEndY);
                     if (newTime !== null && newPrice !== null) {
                         finalTime = newTime;
-                        finalPrice = newPrice;
+                        finalPrice = snapPriceToCandleLevels(finalTime, newPrice);
                     }
                 }
             }

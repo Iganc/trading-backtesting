@@ -9,15 +9,15 @@
 <style>
 html, body { height:100%; margin:0; padding:0; overflow:hidden; }
 .chart-fullscreen { width:100%; height:100vh; display:flex; flex-direction:column; padding:10px; box-sizing:border-box; }
-.chart-page { display:flex; flex-direction:column; flex:1; min-height:0; height:100%; }
+.chart-layout { display:flex; flex:1; min-height:0; height:100%; }
+.sidebar { display:flex; flex-direction:column; gap:10px; margin-right:10px; }
+.main-chart { flex:1; display:flex; flex-direction:column; min-height:0; }
 #chart-container { flex:1; position:relative; width:100%; min-height:400px; cursor:crosshair; }
 .legend { position:absolute; top:10px; right:10px; background:rgba(255,255,255,0.8); padding:8px; border-radius:4px; font-size:12px; z-index:10; }
-.info-overlay { position:absolute; top:0; right:0; background:rgba(255,255,255,0.85); padding:8px 15px; margin:10px; border-radius:5px; z-index:20; font-size:12px; box-shadow:0 2px 5px rgba(0,0,0,0.1); max-width:70%; }
-.info-overlay p { margin:3px 0; display:inline-block; margin-right:15px; }
 .timeframe-buttons { display:flex; gap:10px; margin-bottom:10px; }
 .timeframe-btn { padding:8px 16px; background:#e0e0e0; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }
 .timeframe-btn.active { background:#007bff; color:white; }
-.drawing-tools { display:flex; gap:10px; margin-bottom:10px; }
+.drawing-tools { display:flex; flex-direction:column; gap:10px; }
 .drawing-btn { padding:8px 16px; background:#e0e0e0; border:none; border-radius:4px; cursor:pointer; }
 .drawing-btn.active { background:#ff7043; color:white; }
 </style>
@@ -25,41 +25,40 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
 
 {% block content %}
 <div class="chart-fullscreen">
-    <div id="info" class="info-overlay">
-        <p><strong>Symbol:</strong> {{ display_symbol }}</p>
-        <p><strong>Date Range:</strong> {{ start_date }} to {{ end_date }}</p>
-    </div>
-    {% if data_warning %}
-    <div class="warning"><strong>Uwaga:</strong> {{ data_warning }}</div>
-    {% endif %}
-    <div class="timeframe-buttons">
-        <button class="timeframe-btn" data-tf="1m">1m</button>
-        <button class="timeframe-btn" data-tf="5m">5m</button>
-        <button class="timeframe-btn" data-tf="15m">15m</button>
-        <button class="timeframe-btn active" data-tf="1h">1h</button>
-        <button class="timeframe-btn" data-tf="4h">4h</button>
-        <button class="timeframe-btn" data-tf="1d">1d</button>
-    </div>
-    <div class="drawing-tools">
-        <button id="long-tool" class="drawing-btn">Long Position</button>
-        <button id="short-tool" class="drawing-btn">Short Position</button>
-        <button id="line-tool" class="drawing-btn">Line Tool</button>
-        <button id="fib-tool" class="drawing-btn">Fibbonaci</button>
-        <button id="rect-tool" class="drawing-btn">Rectangle</button>
-        <button id="clear-drawings" class="drawing-btn">Clear All</button>
-    </div>
-    <div id="bar-replay-controls" style="gap:10px; margin:10px 0;">
-      <button id="bar-replay-prev">◀</button>
-      <button id="bar-replay-next">▶</button>
-      <button id="bar-replay-fast">+5</button>
-      <button id="bar-replay-reset">Reset</button>
-      <span id="bar-replay-status"></span>
-    </div>
-    <div class="chart-page">
-        <div id="chart-container">
-            <div id="legend" class="legend"></div>
+    <div class="chart-layout">
+        <div class="sidebar">
+            <div class="drawing-tools">
+                <button id="long-tool" class="drawing-btn">Long</button>
+                <button id="short-tool" class="drawing-btn">Short</button>
+                <button id="line-tool" class="drawing-btn">Line</button>
+                <button id="fib-tool" class="drawing-btn">Fib</button>
+                <button id="rect-tool" class="drawing-btn">Rect</button>
+                <button id="clear-drawings" class="drawing-btn">Clear</button>
+                <button id="magnet-tool" class="drawing-btn">Magnes</button>
+            </div>
+            <div id="bar-replay-controls" style="gap:10px; margin-top:20px;">
+                <button id="bar-replay-prev">◀</button>
+                <button id="bar-replay-next">▶</button>
+                <button id="bar-replay-fast">+5</button>
+                <button id="bar-replay-reset">Reset</button>
+                <span id="bar-replay-status"></span>
+            </div>
+        </div>
+        <div class="main-chart">
+            <div class="timeframe-buttons">
+                <button class="timeframe-btn" data-tf="1m">1m</button>
+                <button class="timeframe-btn" data-tf="5m">5m</button>
+                <button class="timeframe-btn" data-tf="15m">15m</button>
+                <button class="timeframe-btn active" data-tf="1h">1h</button>
+                <button class="timeframe-btn" data-tf="4h">4h</button>
+                <button class="timeframe-btn" data-tf="1d">1d</button>
+            </div>
+            <div id="chart-container">
+                <div id="legend" class="legend"></div>
+            </div>
         </div>
     </div>
+
     {% if debug %}
     <div style="margin-top:30px; padding:15px; background-color:#f5f5f5; border:1px solid #ddd;">
         <h3>Debug Info:</h3>
@@ -73,6 +72,8 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
 {% endblock %}
 
 {% block scripts %}
+
+<script src="{% static 'backtest_app/bar-replay.js' %}"></script>
 <script>
 console.log("Template loaded");
 
@@ -167,8 +168,6 @@ chart.subscribeCrosshairMove(param => {
     if (data) updateLegend(data);
 });
 window.chart = chart;
-
 </script>
 <script src="{% static 'backtest_app/chart-tools.js' %}"></script>
-<script src="{% static 'backtest_app/bar-replay.js' %}"></script>
 {% endblock %}
