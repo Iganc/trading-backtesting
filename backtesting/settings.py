@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'backtest_app',
     'rest_framework',
+    'accounts',
 ]
 
 REST_FRAMEWORK = {
