@@ -41,11 +41,35 @@ replayIndex = getInitialReplayIndex();
 
 function updateBarReplay() {
     const candles = getCurrentCandles();
-    if (replayIndex < 1) replayIndex = 1;
-    if (replayIndex > candles.length) replayIndex = candles.length;
+    if (!candles.length) return;
+
+    // Zabezpieczenie zakresu
+    replayIndex = Math.max(1, Math.min(replayIndex, candles.length));
+
+    // Zawsze pokazujemy 20 "niewidzialnych" świec naprzód
+    const visibleCount = replayIndex;
+    const totalCount = Math.min(candles.length, visibleCount + 20);
+
+    const displayCandles = candles.slice(0, totalCount).map((c, i) => {
+        if (i >= visibleCount) {
+            // ukryte świeczki
+            return {
+                ...c,
+                open: NaN,
+                high: c.close,
+                low: c.close,
+                color: 'rgba(0,0,0,0)', 
+                borderColor: 'rgba(0,0,0,0)',
+                wickColor: 'rgba(0,0,0,0)'
+            };
+        }
+        return c;
+    });
+
     if (typeof candleSeries !== 'undefined') {
-        candleSeries.setData(prepareCandleData(candles.slice(0, replayIndex)));
+        candleSeries.setData(prepareCandleData(displayCandles));
     }
+
     const status = document.getElementById('bar-replay-status');
     if (status) {
         status.textContent = `Pokazano ${replayIndex} z ${candles.length} świeczek`;

@@ -1,6 +1,3 @@
-// full modified file — wszystkie tryby zachowane, long/short: TP i SL jako dwa niezależne prostokąty
-// zakładam, że chart, candleSeries, chartContainer, LightweightCharts itp. już są zainicjowane globalnie
-
 console.log('chart global?', typeof chart !== 'undefined', chart);
 
 // --- stan narzędzi ---
@@ -20,16 +17,7 @@ window.addEventListener('candlesUpdated', () => {
     candles = window.candles || [];
 });
 
-// --- nowe tablice dla pozycji (wielu) ---
-// struktura pozycji:
-// {
-//   entryTime, endTime, entryPrice, slPrice, tpPrice,
-//   tpSeries: {top,bottom,left,right,middle},
-//   slSeries: {top,bottom,left,right,middle},
-//   entryLine: LineSeries,
-//   areaSeries: AreaSeries,
-//   color, thin
-// }
+
 let longPositions = [];
 let shortPositions = [];
 
@@ -445,14 +433,14 @@ chartContainer.addEventListener('mousedown', e => {
             const entryTime = time;
             const entryPrice = price;
 
-            const defaultDelta = Math.max((chart.priceScale().height || 100) * 0.01, Math.abs(entryPrice) * 0.01);
+            const defaultDelta = Math.abs(entryPrice) * 0.002;
             let slPrice, tpPrice;
             if (isLongMode) {
                 slPrice = entryPrice - defaultDelta;
-                tpPrice = entryPrice + (defaultDelta * 2);
+                tpPrice = entryPrice + defaultDelta;
             } else {
                 slPrice = entryPrice + defaultDelta;
-                tpPrice = entryPrice - (defaultDelta * 2);
+                tpPrice = entryPrice - defaultDelta;
             }
 
             const entryIdx = candles.findIndex(c => getTimeValue(c.time) === getTimeValue(entryTime));
@@ -910,7 +898,6 @@ chartContainer.addEventListener('mousemove', e => {
     }
 });
 
-// --- mouseup: zakończ drag ---
 document.addEventListener('mouseup', e => {
     if (isDragging) {
         chart.applyOptions({ handleScroll: true, handleScale: true });
@@ -921,15 +908,3 @@ document.addEventListener('mouseup', e => {
         e.stopPropagation();
     }
 });
-
-// --- (opcjonalne) aktualizacja końców boxów przy zmianie widoku ---
-// jeśli chcesz żeby box rozciągał się do widocznego zakresu, odkomentuj i dopasuj
-// chart.timeScale().subscribeVisibleTimeRangeChange(() => {
-//     [...longPositions, ...shortPositions].forEach(p => {
-//         const visibleRange = chart.timeScale().getVisibleRange();
-//         if (visibleRange) {
-//             p.endTime = visibleRange.to;
-//             setTwoBoxesForPosition(p);
-//         }
-//     });
-// });
