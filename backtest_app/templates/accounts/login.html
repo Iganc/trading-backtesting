@@ -4,4 +4,5 @@
     {{ form.as_p }}
     <button type="submit">Zaloguj</button>
 </form>
+<p><a href="{% url 'password_reset' %}">Zapomniałeś hasła?</a></p>
 <p>Nie masz konta? <a href="{% url 'register' %}">Zarejestruj się</a></p>

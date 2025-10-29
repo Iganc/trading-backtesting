@@ -5,6 +5,19 @@
 {% block title %}Continuous Contract Backtesting{% endblock %}
 
 {% block content %}
+    {% if user.is_authenticated %}
+        <p>Witaj, {{ user.username }}! 
+            <form action="{% url 'logout' %}" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn">Wyloguj się</button>
+            </form>
+        </p>
+    {% else %}
+        <p>
+            <a class="btn" href="{% url 'login' %}">Zaloguj się</a>
+            <a class="btn" href="{% url 'register' %}">Rejestracja</a>
+        </p>
+    {% endif %}
     <h1>Continuous Contract Backtesting</h1>
     
     {% for symbol, info in data.items %}
