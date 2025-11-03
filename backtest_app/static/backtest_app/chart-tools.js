@@ -28,6 +28,7 @@ let dragInfo = null; // { type: 'sl'|'tp'|'move', side: 'long'|'short', index: n
 
 // progi w pikselach, jak blisko krawędzi aby uznać kliknięcie za "grab"
 const HIT_PIXEL_THRESHOLD = 20;
+ENTRY_HIT_PIXEL_THRESHOLD = 15;
 
 // Przyciski (zakładam, że istnieją w DOM)
 const longToolBtn = document.getElementById('long-tool');
@@ -304,75 +305,53 @@ function safeRemoveLine(line) {
     return null;
 }
 
-// --- find nearest editable element (top/bottom/middle) dla interakcji ---
-// zwraca { side, index, type } tak jak wcześniej; działa dla obu list
 function findNearestPosition(clientX, clientY) {
     const rect = chartContainer.getBoundingClientRect();
     const x = clientX - rect.left;
     const y = clientY - rect.top;
 
-    // sprawdź longPositions
-    for (let i = longPositions.length - 1; i >= 0; i--) {
-        const p = longPositions[i];
-        const minTime = Math.min(p.entryTime, p.endTime || p.entryTime);
-        const maxTime = Math.max(p.entryTime, p.endTime || p.entryTime);
-        const topY = priceToY(p.tpPrice);
-        const bottomY = priceToY(p.slPrice);
-        const leftX = timeToX(minTime);
-        const rightX = timeToX(maxTime);
-        const entryY = priceToY(p.entryPrice);
+    const checkPositions = (positions, side) => {
+        for (let i = positions.length - 1; i >= 0; i--) {
+            const p = positions[i];
+            const minTime = Math.min(p.entryTime, p.endTime || p.entryTime);
+            const maxTime = Math.max(p.entryTime, p.endTime || p.entryTime);
+            const topY = priceToY(p.tpPrice);
+            const bottomY = priceToY(p.slPrice);
+            const leftX = timeToX(minTime);
+            const rightX = timeToX(maxTime);
+            const entryY = priceToY(p.entryPrice);
 
-        if (topY != null && bottomY != null && leftX != null && rightX != null) {
-            if (Math.abs(y - topY) <= HIT_PIXEL_THRESHOLD && x >= leftX - HIT_PIXEL_THRESHOLD && x <= rightX + HIT_PIXEL_THRESHOLD) {
-                return { side: 'long', index: i, type: 'tp' };
+            if (topY == null || bottomY == null || leftX == null || rightX == null) continue;
+
+            // TP / SL
+            if (Math.abs(y - topY) <= HIT_PIXEL_THRESHOLD && x >= leftX - HIT_PIXEL_THRESHOLD && x <= rightX + HIT_PIXEL_THRESHOLD)
+                return { side, index: i, type: 'tp' };
+            if (Math.abs(y - bottomY) <= HIT_PIXEL_THRESHOLD && x >= leftX - HIT_PIXEL_THRESHOLD && x <= rightX + HIT_PIXEL_THRESHOLD)
+                return { side, index: i, type: 'sl' };
+
+            // ENTRY (sprawdzane wcześniej)
+            if (entryY != null && Math.abs(y - entryY) <= ENTRY_HIT_PIXEL_THRESHOLD) {
+                if (Math.abs(leftX - rightX) < 2 * ENTRY_HIT_PIXEL_THRESHOLD) {
+                    if (Math.abs(x - leftX) <= ENTRY_HIT_PIXEL_THRESHOLD)
+                        return { side, index: i, type: 'entry' };
+                } else if (x >= leftX && x <= rightX) {
+                    return { side, index: i, type: 'entry' };
+                }
             }
-            if (Math.abs(y - bottomY) <= HIT_PIXEL_THRESHOLD && x >= leftX - HIT_PIXEL_THRESHOLD && x <= rightX + HIT_PIXEL_THRESHOLD) {
-                return { side: 'long', index: i, type: 'sl' };
-            }
+
+            // MOVE
             const midY = (topY + bottomY) / 2;
-            if (Math.abs(y - midY) <= HIT_PIXEL_THRESHOLD && x >= leftX && x <= rightX) {
-                return { side: 'long', index: i, type: 'move' };
-            }
-            if (entryY != null && Math.abs(y - entryY) <= HIT_PIXEL_THRESHOLD && x >= leftX && x <= rightX) {
-                return { side: 'long', index: i, type: 'entry' };
-            }
-            if ( y > Math.min(topY, bottomY) + HIT_PIXEL_THRESHOLD && y < Math.max(topY, bottomY) - HIT_PIXEL_THRESHOLD && x >= leftX && x <= rightX) {
-                return { side: 'long', index: i, type: 'move' };
+            if (
+                (Math.abs(y - midY) <= HIT_PIXEL_THRESHOLD && x >= leftX && x <= rightX) ||
+                (y > Math.min(topY, bottomY) + HIT_PIXEL_THRESHOLD && y < Math.max(topY, bottomY) - HIT_PIXEL_THRESHOLD && x >= leftX && x <= rightX)
+            ) {
+                return { side, index: i, type: 'move' };
             }
         }
-    }
+        return null;
+    };
 
-    // sprawdź shortPositions
-    for (let i = shortPositions.length - 1; i >= 0; i--) {
-        const p = shortPositions[i];
-        const minTime = Math.min(p.entryTime, p.endTime || p.entryTime);
-        const maxTime = Math.max(p.entryTime, p.endTime || p.entryTime);
-        const topY = priceToY(p.tpPrice);
-        const bottomY = priceToY(p.slPrice);
-        const leftX = timeToX(minTime);
-        const rightX = timeToX(maxTime);
-        const entryY = priceToY(p.entryPrice);
-
-        if (topY != null && bottomY != null && leftX != null && rightX != null) {
-            if (Math.abs(y - topY) <= HIT_PIXEL_THRESHOLD && x >= leftX - HIT_PIXEL_THRESHOLD && x <= rightX + HIT_PIXEL_THRESHOLD) {
-                return { side: 'short', index: i, type: 'tp' };
-            }
-            if (Math.abs(y - bottomY) <= HIT_PIXEL_THRESHOLD && x >= leftX - HIT_PIXEL_THRESHOLD && x <= rightX + HIT_PIXEL_THRESHOLD) {
-                return { side: 'short', index: i, type: 'sl' };
-            }
-            const midY = (topY + bottomY) / 2;
-            if (Math.abs(y - midY) <= HIT_PIXEL_THRESHOLD && x >= leftX && x <= rightX) {
-                return { side: 'short', index: i, type: 'move' };
-            }
-            if ( entryY != null && Math.abs(y - entryY) <= HIT_PIXEL_THRESHOLD && x >= leftX && x <= rightX) {
-                return { side: 'short', index: i, type: 'entry' };
-            }
-            if ( y > Math.min(topY, bottomY) + HIT_PIXEL_THRESHOLD && y < Math.max(topY, bottomY) - HIT_PIXEL_THRESHOLD && x >= leftX && x <= rightX) {
-                return { side: 'long', index: i, type: 'move' };
-            }
-        }
-    }
-    return null;
+    return checkPositions(longPositions, 'long') || checkPositions(shortPositions, 'short');
 }
 
 function pointToLineDistance(px, py, x1, y1, x2, y2) {

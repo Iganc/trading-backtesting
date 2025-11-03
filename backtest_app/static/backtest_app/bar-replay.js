@@ -39,7 +39,9 @@ function getInitialReplayIndex() {
     return Math.min(barsFor4h, candles.length);
 }
 
-let replayIndex = getInitialReplayIndex();
+let replayIndex = (typeof window.replayIndex !== 'undefined' && Number.isFinite(window.replayIndex))
+    ? window.replayIndex
+    : getInitialReplayIndex();
 
 function updateBarReplay() {
     const candles = getCurrentCandles();
@@ -73,7 +75,10 @@ function updateBarReplay() {
 
     const status = document.getElementById('bar-replay-status');
     if (status) {
-        status.textContent = `Pokazano ${replayIndex} z ${candles.length} świeczek`;
+        const totalCount = (typeof window.totalCandlesCount === 'number' && window.totalCandlesCount > 0)
+    ? window.totalCandlesCount
+    : candles.length;
+        status.textContent = `Pokazano ${replayIndex} z ${totalCount} świeczek`;
     }
 }
 
@@ -91,7 +96,7 @@ document.getElementById('bar-replay-fast').addEventListener('click', () => {
     updateBarReplay();
 });
 document.getElementById('bar-replay-reset').addEventListener('click', () => {
-    replayIndex = getCurrentCandles().length;
+    replayIndex = window.replayIndex || getCurrentCandles().length;
     updateBarReplay();
 });
 

@@ -16,6 +16,7 @@ from django.db.models import Min, Max, Count
 from django.utils.timezone import make_aware
 from django.shortcuts import render
 from django.contrib.humanize.templatetags.humanize import intcomma
+import json
 
 class GenericChartView(View):
     """Generyczny view dla wykresów finansowych"""
@@ -252,7 +253,6 @@ class GenericChartView(View):
             display_symbol = 'NQ'
         
         # Konwertuj dane na format JSON
-        import json
         chart_data_json = json.dumps(timeframes)
         
         count = data.count()
@@ -401,7 +401,10 @@ def home_view(request):
     last_week = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
     last_month = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
     last_year = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
-    
+    user_sessions = []
+    if request.user.is_authenticated:
+        user_sessions = BacktestingSession.objects.filter(user=request.user).order_by('-created_at')
+
     context = {
         'data': data,
         'today': today,
@@ -409,7 +412,8 @@ def home_view(request):
         'last_month': last_month,
         'last_year': last_year,
         'random_date_from': random_date_from.strftime('%Y-%m-%d'),
-        'random_date_to': random_date_to.strftime('%Y-%m-%d')
+        'random_date_to': random_date_to.strftime('%Y-%m-%d'),
+        'user_sessions': user_sessions
     }
     
     return render(request, 'backtest_app/home.html', context)
@@ -539,3 +543,103 @@ def available_contracts(request):
     
     return JsonResponse(list(contracts), safe=False)
 
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from .models import BacktestingSession
+
+@csrf_exempt
+@login_required
+def save_backtesting_session(request):
+    """Zapisuje sesję backtestingu (parametry + wynik)"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Metoda niedozwolona'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        name = data.get('name', '')
+        parameters = data.get('parameters', {})
+        result = data.get('result', {})
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Niepoprawny format JSON'}, status=400)
+
+    session = BacktestingSession.objects.create(
+        user=request.user,
+        name=name,
+        parameters=parameters,
+        result=result
+    )
+    print("FROM save_backtesting_session: ", session)
+    return JsonResponse({'message': 'Sesja zapisana', 'session_id': session.id}, status=201)
+
+@login_required
+def load_backtesting_session(request, session_id):
+    """Wczytuje zapisaną sesję użytkownika"""
+    try:
+        session = BacktestingSession.objects.get(id=session_id, user=request.user)
+    except BacktestingSession.DoesNotExist:
+        return JsonResponse({'error': 'Nie znaleziono sesji'}, status=404)
+    print("FROM load_backtesting_session: ", session)
+    return JsonResponse({
+        'id': session.id,
+        'name': session.name,
+        'created_at': session.created_at,
+        'parameters': session.parameters,
+        'result': session.result
+    })
+
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+
+@login_required
+def chart_from_session(request, session_id):
+    """Wczytuje dane wybranej sesji i renderuje lightweight_chart.html"""
+    try:
+        session = BacktestingSession.objects.get(id=session_id, user=request.user)
+    except BacktestingSession.DoesNotExist:
+        return JsonResponse({'error': 'Nie znaleziono sesji'}, status=404)
+
+    chart_data_dict = session.result.get('candles_data', [])
+    if not chart_data_dict:
+        return JsonResponse({'error': 'Brak danych świec w sesji'}, status=404)
+    
+    symbol = session.parameters.get('symbol', 'ES')
+    start_date = session.parameters.get('start_date', '')
+    end_date = session.parameters.get('end_date', '')
+
+    symbol_mapping = {
+        'ES': 'ES.v.0',
+        'NQ': 'NQ.v.0'
+    }
+    db_symbol = symbol_mapping.get(symbol.upper(), symbol)
+
+
+    from .models import TimeSeriesData
+    if start_date and end_date:
+        total_candles = TimeSeriesData.objects.filter(
+            symbol=db_symbol,
+            date__gte=start_date,
+            date__lte=end_date
+        ).count()
+    elif start_date:
+        total_candles = TimeSeriesData.objects.filter(
+            symbol=db_symbol,
+            date__gte=start_date
+        ).count()
+    else:
+        total_candles = TimeSeriesData.objects.filter(
+            symbol=db_symbol
+        ).count()
+    visible_candles = min(session.result.get('visible_candles', len(chart_data_dict)), total_candles)
+    session_total_candles = session.result.get('total_candles', total_candles)
+    context = {
+        'display_symbol': symbol,
+        'chart_data': json.dumps({'1h': chart_data_dict}),  
+        'start_date': start_date,
+        'end_date': end_date,
+        'session_id': session.id,
+        'visible_candles': visible_candles,
+        'total_candles': total_candles,
+        'session_total_candles': session_total_candles,
+    }
+
+    return render(request, 'backtest_app/lightweight_chart.html', context)

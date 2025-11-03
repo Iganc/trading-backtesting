@@ -12,6 +12,14 @@
                 <button type="submit" class="btn">Wyloguj się</button>
             </form>
         </p>
+        <select id="session-select">
+            <option value="">-- wybierz sesję --</option>
+            {% for s in user_sessions %}
+            <option value="{{ s.id }}">{{ s.name }}</option>
+            {% endfor %}
+        </select>
+        <button id="load-session-btn">Wczytaj sesję</button>
+
     {% else %}
         <p>
             <a class="btn" href="{% url 'login' %}">Zaloguj się</a>
@@ -66,5 +74,12 @@
                 alert('Podaj przynajmniej datę początkową');
             }
         }
+        document.getElementById('load-session-btn').addEventListener('click', () => {
+            const select = document.getElementById('session-select');
+            const sessionId = select.value;
+            if (!sessionId) return alert('Wybierz sesję');
+
+            window.location.href = "{% url 'chart_from_session' 0 %}".replace('/0/', `/${sessionId}/`);
+        });
     </script>
 {% endblock %}
