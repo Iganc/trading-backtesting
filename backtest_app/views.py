@@ -640,6 +640,7 @@ def chart_from_session(request, session_id):
         'visible_candles': visible_candles,
         'total_candles': total_candles,
         'session_total_candles': session_total_candles,
+        'current_candle': json.dumps(session.result.get('current_candle', {})),
     }
 
     return render(request, 'backtest_app/lightweight_chart.html', context)

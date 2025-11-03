@@ -1,4 +1,7 @@
-function getCurrentTimeframe() {
+import { store } from './store.js';
+import { prepareCandleData } from './utils.js';
+
+export function getCurrentTimeframe() {
     if (typeof currentTimeframe !== 'undefined') {
         return currentTimeframe;
     }
@@ -9,7 +12,7 @@ function getCurrentTimeframe() {
     return null;
 }
 
-function getCurrentCandles() {
+export function getCurrentCandles() {
     const tf = getCurrentTimeframe();
     if (typeof chartData !== 'undefined' && chartData[tf]) {
         return chartData[tf];
@@ -20,8 +23,7 @@ function getCurrentCandles() {
 // Przechowujemy poprzedni TF globalnie
 let prevTimeframe = getCurrentTimeframe();
 
-// Funkcja inicjalizująca replayIndex
-function getInitialReplayIndex() {
+export function getInitialReplayIndex() {
     const tf = getCurrentTimeframe();
     const candles = getCurrentCandles();
     if (!tf || !candles.length) return 1;
@@ -43,13 +45,16 @@ let replayIndex = (typeof window.replayIndex !== 'undefined' && Number.isFinite(
     ? window.replayIndex
     : getInitialReplayIndex();
 
-function updateBarReplay() {
+export function updateBarReplay() {
+    if (typeof window.replayIndex !== 'undefined' && Number.isFinite(window.replayIndex) && window.replayIndex !== replayIndex) {
+        replayIndex = window.replayIndex;
+    }
     const candles = getCurrentCandles();
     if (!candles.length) return;
 
     // Zabezpieczenie zakresu
     replayIndex = Math.max(1, Math.min(replayIndex, candles.length));
-
+    window.replayIndex = replayIndex;
     // Pokazujemy replayIndex świeczek + 20 „niewidzialnych”
     const visibleCount = replayIndex;
     const totalCount = Math.min(candles.length, visibleCount + 20);
@@ -69,8 +74,8 @@ function updateBarReplay() {
         return c;
     });
 
-    if (typeof candleSeries !== 'undefined') {
-        candleSeries.setData(prepareCandleData(displayCandles));
+    if (typeof store.candleSeries !== 'undefined') {
+        store.candleSeries.setData(prepareCandleData(displayCandles));
     }
 
     const status = document.getElementById('bar-replay-status');
@@ -85,18 +90,22 @@ function updateBarReplay() {
 // Przyciski sterujące
 document.getElementById('bar-replay-prev').addEventListener('click', () => {
     replayIndex--;
+    window.replayIndex = replayIndex;
     updateBarReplay();
 });
 document.getElementById('bar-replay-next').addEventListener('click', () => {
     replayIndex++;
+    window.replayIndex = replayIndex;
     updateBarReplay();
 });
 document.getElementById('bar-replay-fast').addEventListener('click', () => {
     replayIndex += 5;
+    window.replayIndex = replayIndex;
     updateBarReplay();
 });
 document.getElementById('bar-replay-reset').addEventListener('click', () => {
     replayIndex = window.replayIndex || getCurrentCandles().length;
+    window.replayIndex = replayIndex;
     updateBarReplay();
 });
 

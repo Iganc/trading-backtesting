@@ -8,7 +8,7 @@
 <script src="https://unpkg.com/lightweight-charts@5.0.9/dist/lightweight-charts.standalone.production.js"></script>
 <style>
 html, body { height:100%; margin:0; padding:0; overflow:hidden; }
-.chart-fullscreen { width:100%; height:100vh; display:flex; flex-direction:column; padding:10px; box-sizing:border-box; }
+.chart-fullscreen { width:100%; height:100vh; display:flex; flex-direction:column; padding:10px; box-sizing:border-box; position: relative;}
 .chart-layout { display:flex; flex:1; min-height:0; height:100%; }
 .sidebar { display:flex; flex-direction:column; gap:10px; margin-right:10px; }
 .main-chart { flex:1; display:flex; flex-direction:column; min-height:0; }
@@ -31,6 +31,13 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
     justify-content: center;
 }
 .drawing-btn.active { background:#ff7043; color:white; }
+#save-session-btn {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+}
 </style>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 {% endblock %}
@@ -95,142 +102,15 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
 
 
 <script>
-console.log("Template loaded");
-
-// Parse data from server
-let chartData;
-try {
-    chartData = JSON.parse('{{ chart_data|escapejs }}');
-    console.log("Chart data parsed:", Object.keys(chartData));
-} catch(e) {
-    console.error("JSON parse error:", e);
-    chartData = {};
-}
-window.totalCandlesCount = {{ session_total_candles|default:0 }};
-window.replayIndex = {{ visible_candles|default:1 }};
-
-// DOM
-const chartContainer = document.getElementById('chart-container');
-const legendElement = document.getElementById('legend');
-let currentTimeframe = '1h';
-
-function prepareCandleData(data) {
-    return data.map(d => ({
-        time: Number(d.time),
-        open: d.open,
-        high: d.high,
-        low: d.low,
-        close: d.close
-    }));
-}
-
-// Chart config
-const chartOptions = {
-    layout: { background:{color:'#fff'}, textColor:'#333' },
-    grid: { vertLines:{color:'#f0f0f0'}, horzLines:{color:'#f0f0f0'} },
-    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-    rightPriceScale: { borderColor:'#d1d4dc' },
-    timeScale: { borderColor:'#d1d4dc', timeVisible:true, secondsVisible:false },
-    handleScroll: { vertTouchDrag:false },
-};
-
-const chart = LightweightCharts.createChart(chartContainer, chartOptions);
-
-// Dodanie świec
-const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
-    upColor: '#26a69a',
-    downColor: '#ef5350',
-    borderVisible: false,
-    wickUpColor: '#26a69a',
-    wickDownColor: '#ef5350'
-});
-
-window.addEventListener('load', ()=>{
-    resizeChart();
-    loadTimeframeData(currentTimeframe);
-    updateBarReplay();
-    window.dispatchEvent(new Event('candlesUpdated'));
-});
-
-function updateLegend(data) {
-    if (!data) return;
-    const dateStr = data.time ? new Date(data.time*1000).toLocaleString() : '';
-    legendElement.innerHTML = `
-        <div>O: <strong>${data.open.toFixed(2)}</strong></div>
-        <div>H: <strong>${data.high.toFixed(2)}</strong></div>
-        <div>L: <strong>${data.low.toFixed(2)}</strong></div>
-        <div>C: <strong>${data.close.toFixed(2)}</strong></div>
-        <div>${dateStr}</div>
-    `;
-}
-
-function loadTimeframeData(tf) {
-    const tfData = chartData[tf] || [];
-    if (!tfData.length) { alert('Brak danych dla tego timeframe'); return; }
-    candleSeries.setData(prepareCandleData(tfData));
-    updateLegend(tfData[tfData.length-1]);
-    window.candles = tfData;
-    window.replayIndex = window.replayIndex || 1;
-    window.dispatchEvent(new Event('candlesUpdated'));
-    document.querySelectorAll('.timeframe-btn').forEach(btn=>btn.classList.remove('active'));
-    document.querySelector(`.timeframe-btn[data-tf="${tf}"]`)?.classList.add('active');
-}
-
-document.querySelectorAll('.timeframe-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>{currentTimeframe=btn.dataset.tf; loadTimeframeData(currentTimeframe)});
-});
-
-function resizeChart() {
-    chart.applyOptions({width:chartContainer.clientWidth,height:chartContainer.clientHeight});
-}
-window.addEventListener('resize', resizeChart);
-
-chart.subscribeCrosshairMove(param => {
-    if (!param.seriesPrices) return;
-    const data = param.seriesPrices.get(candleSeries);
-    if (data) updateLegend(data);
-});
-window.chart = chart;
-
-document.getElementById('save-session-btn').addEventListener('click', async () => {
-    try {
-        const sessionData = {
-            name: "{{ display_symbol }} - sesja {{ start_date }}",
-            parameters: {
-                symbol: "{{ display_symbol }}",
-                timeframe: currentTimeframe,
-                start_date: "{{ start_date }}",
-                end_date: "{{ end_date }}"
-            },
-            result: {
-                visible_candles: replayIndex,      
-                total_candles: candles.length,       
-                candles_data: candles
-            }
-        };
-
-        const response = await fetch("{% url 'save_session' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify(sessionData)
-        });
-
-        const data = await response.json();
-        if (data.session_id) {
-            alert('Sesja zapisana! ID: ' + data.session_id);
-        } else if (data.error) {
-            alert('Błąd: ' + data.error);
-        }
-        console.log("Session data: ", sessionData)
-    } catch (err) {
-        console.error(err);
-        alert('Wystąpił błąd przy zapisie sesji.');
-    }
-});
+    window.display_symbol = "{{ display_symbol }}";
+    window.start_date = "{{ start_date }}";
+    window.end_date = "{{ end_date }}";
+    window.csrf_token = "{{ csrf_token }}";
+    window.chartData = JSON.parse('{{ chart_data|escapejs }}');
+    window.totalCandlesCount = {{ session_total_candles|default:0 }};
+    window.replayIndex = {{ visible_candles|default:1 }};
+    window.current_candle = {{ current_candle|default:"{}"|safe }};
+    window.saveSessionUrl = "{% url 'save_session' %}";
 </script>
-<script src="{% static 'backtest_app/bar-replay.js' %}"></script>
-<script src="{% static 'backtest_app/chart-tools.js' %}"></script>
+<script type="module" src="{% static 'backtest_app/js/main.js' %}"></script>
 {% endblock %}
