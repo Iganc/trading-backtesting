@@ -36,12 +36,44 @@ setChart(chart);
 setCandleSeries(candleSeries);
 setChartContainer(chartContainer);
 
+<<<<<<< HEAD
 const chartData = window.chartData || {};
 let currentTimeframe = '1h';
 
 console.log('chartData:', chartData);
 console.log('currentTimeframe:', currentTimeframe);
 console.log('tfData:', chartData[currentTimeframe]);
+=======
+chart.applyOptions({
+    handleScroll: {
+        mouseWheel: true,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: true,
+    },
+    handleScale: {
+        axisPressedMouseMove: true,
+        axisDoubleClickReset: true,
+        mouseWheel: true,
+        pinch: true,
+    },
+    timeScale: {
+        minBarSpacing: 0.5,
+    },
+    rightPriceScale: {
+        scaleMargins: {
+            top: 0.2,    
+            bottom: 0.1  
+        },
+        mode: 1,        
+        autoScale: true
+    }
+});
+
+const chartData = window.chartData || {};
+let currentTimeframe = '1h';
+
+>>>>>>> openingPositions
 function loadTimeframeData(tf) {
     const tfData = chartData[tf] || [];
     if (!tfData.length) { alert('Brak danych dla tego timeframe'); return; }
