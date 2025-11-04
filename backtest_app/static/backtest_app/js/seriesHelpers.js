@@ -1,4 +1,3 @@
-// import { store.isMagnetMode, store.candles, store.chart } from './store.js';
 import { store } from './store.js';
 import { getTimeValue } from './utils.js';
 

@@ -8,7 +8,6 @@ export function handleDrawingMouseDown(e){
 
     const hit = findNearestPosition(e.clientX, e.clientY);
     if (hit) {
-        // jeśli klikamy na istniejący box (grab) tylko wtedy, gdy nie jesteśmy w trybach rysowania
         if (!store.isDrawingMode && !store.isFibMode && !store.isRectMode && !store.isLongMode && !store.isShortMode) {
             const arr = hit.side === 'long' ? store.longPositions : store.shortPositions;
             const pos = arr[hit.index];
@@ -30,7 +29,6 @@ export function handleDrawingMouseDown(e){
         return;
     }
 
-    // normalne rysowanie / tworzenie long/short
     if (!store.isDrawingMode && !store.isFibMode && !store.isRectMode && !store.isLongMode && !store.isShortMode) return;
 
     const { time, price, x, y } = clientXYToChartTimePrice(e.clientX, e.clientY);
@@ -66,11 +64,9 @@ export function handleDrawingMouseDown(e){
                 maxTime = entryTime + 60 * 60;
             }
             const minTime = entryTime;
-            //TODO: WHEN hovering then enter into EDIT MODE, block the store.chart from moving
             const color = store.isLongMode ? '#00f2ffff' : '#ff0400ff';
             const thin = store.isLongMode ? '#37ff00ff' : '#ff00d0ff';
 
-            // areaSeries (tło) - pokazuje cały zakres od min do max pomiędzy minP,maxP
             const areaSeries = store.chart.addSeries(LightweightCharts.AreaSeries, {
                 topColor: store.isLongMode ? 'rgba(139,195,74,0.12)' : 'rgba(239,83,80,0.12)',
                 bottomColor: store.isLongMode ? 'rgba(139,195,74,0.08)' : 'rgba(239,83,80,0.08)',
@@ -81,11 +77,9 @@ export function handleDrawingMouseDown(e){
                 baseValue: { type: 'price', price: Math.min(slPrice, tpPrice) }
             });
 
-            // tworzymy oddzielne boxy: tp (między entry a tp) oraz sl (między entry a sl)
             const tpSeries = createBoxSeries(color, thin);
             const slSeries = createBoxSeries(color, thin);
 
-            // entry line
             const entryLine = store.chart.addSeries(LightweightCharts.LineSeries, {
                 color: '#333333',
                 lineWidth: 1,
@@ -108,7 +102,6 @@ export function handleDrawingMouseDown(e){
                 thin
             };
 
-            // ustaw dane dla obu boxów
             setTwoBoxesForPosition(pos);
 
             if (store.isLongMode) store.longPositions.push(pos); else store.shortPositions.push(pos);
@@ -179,7 +172,6 @@ export function handleDrawingMouseDown(e){
                 
             }
         } else if (store.isFibMode) {
-            // fibo logic (bez zmian poza snap przy zapisie punktów)
             if (store.drawingPoints.length === 0) {
                 store.drawingPoints.push({ time, price: snappedPrice });
                 store.currentLine = store.chart.addSeries(LightweightCharts.LineSeries, {
@@ -248,7 +240,6 @@ export function handleDrawingMouseDown(e){
                 removeActive();
             }
         } else if (store.isRectMode) {
-            // prostokąty (bez zmian poza snap przy zapisie punktów)
             if (store.drawingPoints.length === 0) {
                 store.drawingPoints.push({ time, price: snappedPrice });
                 store.currentLine = store.chart.addSeries(LightweightCharts.LineSeries, {
@@ -389,15 +380,12 @@ export function handleDrawingMouseMove(e){
             } else if (store.dragInfo.type === 'entry') {
                 p.entryPrice = snappedPrice;
             } else if (store.dragInfo.type === 'move') {
-                // Przesuwanie w pionie (cena)
                 const deltaPrice = snappedPrice - store.dragInfo.startEntryPrice;
             
-                // Przesuwanie w poziomie (czas) - snap do świeczek!
                 const rect = store.chartContainer.getBoundingClientRect();
                 const currentX = e.clientX - rect.left;
                 const startX = store.dragInfo.startX - rect.left;
             
-                // znajdź indeks świecy na początku i teraz
                 const startTime = snapTimeToCandle(store.chart.timeScale().coordinateToTime(startX));
                 const currentTime = snapTimeToCandle(store.chart.timeScale().coordinateToTime(currentX));
                 if (startTime == null || currentTime == null) return;
@@ -407,8 +395,6 @@ export function handleDrawingMouseMove(e){
                 if (startIdx === -1 || currentIdx === -1) return;
             
                 const deltaIdx = currentIdx - startIdx;
-            
-                // przesuń entryTime i endTime o deltaIdx świec
                 const entryIdx = store.candles.findIndex(c => getTimeValue(c.time) === getTimeValue(store.dragInfo.startEntryTime));
                 const endIdx = store.candles.findIndex(c => getTimeValue(c.time) === getTimeValue(store.dragInfo.startEndTime));
                 if (entryIdx === -1 || endIdx === -1) return;
@@ -416,7 +402,6 @@ export function handleDrawingMouseMove(e){
                 const newEntryIdx = entryIdx + deltaIdx;
                 const newEndIdx = endIdx + deltaIdx;
             
-                // zabezpieczenie przed wyjściem poza zakres
                 if (newEntryIdx < 0 || newEndIdx < 0 || newEntryIdx >= store.candles.length || newEndIdx >= store.candles.length) return;
             
                 p.entryPrice = store.dragInfo.startEntryPrice + deltaPrice;
@@ -427,7 +412,6 @@ export function handleDrawingMouseMove(e){
                 p.endTime = store.candles[newEndIdx].time;
             }
 
-            // zaktualizuj serię dla tej pozycji
             setTwoBoxesForPosition(p);
         } catch (err) {
             console.error("Error during dragging:", err);
@@ -435,7 +419,6 @@ export function handleDrawingMouseMove(e){
         return;
     }
 
-    // jeśli rysujemy new rect/line/fib (Twoja istniejąca logika)
     if ((!store.isDrawingMode && !store.isFibMode && !store.isRectMode) || store.drawingPoints.length !== 1 || !store.currentLine) return;
 
     const rect = store.chartContainer.getBoundingClientRect();

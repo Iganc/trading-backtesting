@@ -1,4 +1,3 @@
-// import { store.longPositions, store.shortPositions, store.chart, candleSeries, store.chartContainer } from './store.js';
 import { store } from './store.js';
 import { setTwoBoxesForPosition, removePositionSeries } from './seriesHelpers.js';
 import { priceToY, timeToX, getTimeValue } from './utils.js';

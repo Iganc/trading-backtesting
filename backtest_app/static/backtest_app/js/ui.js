@@ -24,7 +24,6 @@ export function removeActive() {
     store.chartContainer.style.cursor = 'default';
 }
 
-// Przykład: aktywacja narzędzi
 magnetToolBtn.addEventListener('click', () => {
     store.isMagnetMode = !store.isMagnetMode;
     magnetToolBtn.classList.toggle('active', store.isMagnetMode);

@@ -20,7 +20,6 @@ export function getCurrentCandles() {
     return [];
 }
 
-// Przechowujemy poprzedni TF globalnie
 let prevTimeframe = getCurrentTimeframe();
 
 export function getInitialReplayIndex() {
@@ -54,10 +53,6 @@ export function updateBarReplay() {
 
     replayIndex = Math.max(1, Math.min(replayIndex, candles.length));
     window.replayIndex = replayIndex;
-<<<<<<< HEAD
-    // Pokazujemy replayIndex świeczek + 20 „niewidzialnych”
-=======
->>>>>>> openingPositions
     const visibleCount = replayIndex;
     const totalCount = Math.min(candles.length, visibleCount + 20);
 
@@ -76,10 +71,6 @@ export function updateBarReplay() {
         return c;
     });
 
-<<<<<<< HEAD
-    if (typeof store.candleSeries !== 'undefined') {
-        store.candleSeries.setData(prepareCandleData(displayCandles));
-=======
     
     if (typeof store.candleSeries !== 'undefined') {
         store.candleSeries.setData(prepareCandleData(displayCandles));
@@ -101,7 +92,6 @@ export function updateBarReplay() {
                 });
             }
         }
->>>>>>> openingPositions
     }
     store.candleSeries.applyOptions({
         lastValueVisible: false,      
