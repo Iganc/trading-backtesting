@@ -36,14 +36,6 @@ setChart(chart);
 setCandleSeries(candleSeries);
 setChartContainer(chartContainer);
 
-<<<<<<< HEAD
-const chartData = window.chartData || {};
-let currentTimeframe = '1h';
-
-console.log('chartData:', chartData);
-console.log('currentTimeframe:', currentTimeframe);
-console.log('tfData:', chartData[currentTimeframe]);
-=======
 chart.applyOptions({
     handleScroll: {
         mouseWheel: true,
@@ -73,7 +65,6 @@ chart.applyOptions({
 const chartData = window.chartData || {};
 let currentTimeframe = '1h';
 
->>>>>>> openingPositions
 function loadTimeframeData(tf) {
     const tfData = chartData[tf] || [];
     if (!tfData.length) { alert('Brak danych dla tego timeframe'); return; }
