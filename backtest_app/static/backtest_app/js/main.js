@@ -39,9 +39,6 @@ setChartContainer(chartContainer);
 const chartData = window.chartData || {};
 let currentTimeframe = '1h';
 
-console.log('chartData:', chartData);
-console.log('currentTimeframe:', currentTimeframe);
-console.log('tfData:', chartData[currentTimeframe]);
 function loadTimeframeData(tf) {
     const tfData = chartData[tf] || [];
     if (!tfData.length) { alert('Brak danych dla tego timeframe'); return; }

@@ -52,10 +52,8 @@ export function updateBarReplay() {
     const candles = getCurrentCandles();
     if (!candles.length) return;
 
-    // Zabezpieczenie zakresu
     replayIndex = Math.max(1, Math.min(replayIndex, candles.length));
     window.replayIndex = replayIndex;
-    // Pokazujemy replayIndex świeczek + 20 „niewidzialnych”
     const visibleCount = replayIndex;
     const totalCount = Math.min(candles.length, visibleCount + 20);
 
@@ -74,9 +72,32 @@ export function updateBarReplay() {
         return c;
     });
 
+    
     if (typeof store.candleSeries !== 'undefined') {
         store.candleSeries.setData(prepareCandleData(displayCandles));
+
+        if (store.lastPriceLine) {
+            store.candleSeries.removePriceLine(store.lastPriceLine);
+            store.lastPriceLine = null;
+        }
+
+        if (visibleCount > 0) {
+            const lastVisibleCandle = displayCandles[visibleCount - 1];
+            if (lastVisibleCandle && !isNaN(lastVisibleCandle.close)) {
+                store.lastPriceLine = store.candleSeries.createPriceLine({
+                    price: lastVisibleCandle.close,
+                    color: 'red',
+                    lineWidth: 1,
+                    lineStyle: 2,
+                    axisLabelVisible: true,
+                });
+            }
+        }
     }
+    store.candleSeries.applyOptions({
+        lastValueVisible: false,      
+        priceLineVisible: false 
+    });
 
     const status = document.getElementById('bar-replay-status');
     if (status) {
@@ -87,7 +108,6 @@ export function updateBarReplay() {
     }
 }
 
-// Przyciski sterujące
 document.getElementById('bar-replay-prev').addEventListener('click', () => {
     replayIndex--;
     window.replayIndex = replayIndex;
