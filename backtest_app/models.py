@@ -24,7 +24,6 @@ class BacktestingSession(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # Dane o stanie sesji
     instrument = models.CharField(max_length=50) 
     timeframe = models.CharField(max_length=10) 
     current_timestamp = models.DateTimeField(null=True, blank=True) 

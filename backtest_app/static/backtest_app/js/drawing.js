@@ -87,6 +87,9 @@ export function handleDrawingMouseDown(e){
                 lastValueVisible: false,
                 priceLineVisible: false
             });
+            
+            const openPL = 0; 
+            const rrRatio = Math.abs(tpPrice - entryPrice) / Math.abs(entryPrice - slPrice);
 
             const pos = {
                 entryTime,
@@ -99,7 +102,11 @@ export function handleDrawingMouseDown(e){
                 entryLine,
                 areaSeries,
                 color,
-                thin
+                thin,
+                openPL,
+                rrRatio,
+                stop: slPrice,
+                target: tpPrice
             };
 
             setTwoBoxesForPosition(pos);
@@ -347,10 +354,38 @@ export function handleDrawingMouseDown(e){
     }
 };
 
+export function showPositionDetails(pos) {
+    const panel = document.getElementById('position-details');
+    if (!panel || !pos) return;
+    panel.style.display = 'block'; 
+    panel.innerHTML = `
+        <div><strong>Open P&amp;L:</strong> ${pos.openPL?.toFixed(2) ?? '0.00'}</div>
+        <div><strong>R/R Ratio:</strong> ${pos.rrRatio?.toFixed(2) ?? '-'}</div>
+        <div><strong>STOP:</strong> ${pos.stop?.toFixed(2) ?? '-'}</div>
+        <div><strong>TARGET:</strong> ${pos.target?.toFixed(2) ?? '-'}</div>
+    `;
+}
+
 export function handleDrawingMouseMove(e){
     if (!store.isDragging) {
         const hit = findNearestPosition(e.clientX, e.clientY);
         if (hit) {
+            const arr = hit.side === 'long' ? store.longPositions : store.shortPositions;
+            const p = arr[hit.index];
+            if (p) {
+                const lastCandle = store.candles[store.candles.length - 1];
+                if (lastCandle) {
+                    if (hit.side === 'long') {
+                        p.openPL = (lastCandle.close - p.entryPrice) * (p.qty ?? 1);
+                    } else {
+                        p.openPL = (p.entryPrice - lastCandle.close) * (p.qty ?? 1);
+                    }
+                }
+                p.rrRatio = Math.abs(p.tpPrice - p.entryPrice) / Math.abs(p.entryPrice - p.slPrice);
+                p.stop = p.slPrice;
+                p.target = p.tpPrice;
+                showPositionDetails(p);
+            }
             if (hit.type === 'tp' || hit.type === 'sl' || hit.type === 'entry') {
                 store.chartContainer.style.cursor = 'ns-resize';
             } else if (hit.type === 'move') {
@@ -360,6 +395,8 @@ export function handleDrawingMouseMove(e){
             }
         } else {
             store.chartContainer.style.cursor = (store.isLongMode || store.isShortMode || store.isDrawingMode || store.isRectMode || store.isFibMode) ? 'crosshair' : 'default';
+            const panel = document.getElementById('position-details');
+            if (panel) panel.style.display = 'none';
         }
     }
 
@@ -413,6 +450,21 @@ export function handleDrawingMouseMove(e){
             }
 
             setTwoBoxesForPosition(p);
+            
+            if (p) {
+                const lastCandle = store.candles[store.candles.length - 1];
+                    if (lastCandle) {
+                        if (store.dragInfo.side === 'long') {
+                            p.openPL = (lastCandle.close - p.entryPrice) * (p.qty ?? 1);
+                        } else {
+                            p.openPL = (p.entryPrice - lastCandle.close) * (p.qty ?? 1);
+                        }
+                    }
+                    p.rrRatio = Math.abs(p.tpPrice - p.entryPrice) / Math.abs(p.entryPrice - p.slPrice);
+                    p.stop = p.slPrice;
+                    p.target = p.tpPrice;
+            }
+            showPositionDetails(p);
         } catch (err) {
             console.error("Error during dragging:", err);
         }

@@ -68,7 +68,6 @@ let currentTimeframe = '1h';
 function loadTimeframeData(tf) {
     const tfData = chartData[tf] || [];
     if (!tfData.length) { alert('Brak danych dla tego timeframe'); return; }
-    updateLegend(tfData[tfData.length - 1]);
     window.candles = tfData;
     if (!window.replayIndexInitialized && window.current_candle && Array.isArray(tfData)) {
         const idx = tfData.findIndex(
@@ -83,18 +82,6 @@ function loadTimeframeData(tf) {
     document.querySelectorAll('.timeframe-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelector(`.timeframe-btn[data-tf="${tf}"]`)?.classList.add('active');
     barReplay.updateBarReplay();
-}
-
-function updateLegend(data) {
-    if (!data) return;
-    const dateStr = data.time ? new Date(data.time * 1000).toLocaleString() : '';
-    legendElement.innerHTML = `
-        <div>O: <strong>${data.open.toFixed(2)}</strong></div>
-        <div>H: <strong>${data.high.toFixed(2)}</strong></div>
-        <div>L: <strong>${data.low.toFixed(2)}</strong></div>
-        <div>C: <strong>${data.close.toFixed(2)}</strong></div>
-        <div>${dateStr}</div>
-    `;
 }
 
 document.querySelectorAll('.timeframe-btn').forEach(btn => {
@@ -112,7 +99,6 @@ window.addEventListener('resize', resizeChart);
 chart.subscribeCrosshairMove(param => {
     if (!param.seriesPrices) return;
     const data = param.seriesPrices.get(candleSeries);
-    if (data) updateLegend(data);
 });
 
 chartContainer.addEventListener('mousedown', handleDrawingMouseDown);

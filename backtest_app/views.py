@@ -559,6 +559,7 @@ def save_backtesting_session(request):
         name = data.get('name', '')
         parameters = data.get('parameters', {})
         result = data.get('result', {})
+        account_state = data.get('account_state', {}) 
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Niepoprawny format JSON'}, status=400)
 
@@ -566,7 +567,8 @@ def save_backtesting_session(request):
         user=request.user,
         name=name,
         parameters=parameters,
-        result=result
+        result=result,
+        account_state=account_state
     )
     print("FROM save_backtesting_session: ", session)
     return JsonResponse({'message': 'Sesja zapisana', 'session_id': session.id}, status=201)
@@ -584,7 +586,8 @@ def load_backtesting_session(request, session_id):
         'name': session.name,
         'created_at': session.created_at,
         'parameters': session.parameters,
-        'result': session.result
+        'result': session.result,
+        'account_state': session.account_state 
     })
 
 from django.contrib.auth.decorators import login_required
@@ -641,6 +644,7 @@ def chart_from_session(request, session_id):
         'total_candles': total_candles,
         'session_total_candles': session_total_candles,
         'current_candle': json.dumps(session.result.get('current_candle', {})),
+        'account_state': session.account_state,
     }
 
     return render(request, 'backtest_app/lightweight_chart.html', context)
