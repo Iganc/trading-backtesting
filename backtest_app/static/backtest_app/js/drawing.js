@@ -68,9 +68,9 @@ export function handleDrawingMouseDown(e){
             const thin = store.isLongMode ? '#37ff00ff' : '#ff00d0ff';
 
             const areaSeries = store.chart.addSeries(LightweightCharts.AreaSeries, {
-                topColor: store.isLongMode ? 'rgba(0, 255, 0, 1)' : 'rgba(255, 0, 0, 1)',   // góra pozycji: zielony / czerwony
-                bottomColor: store.isLongMode ? 'rgba(0, 255, 0, 1)' : 'rgba(255, 0, 0, 1)', // dół pozycji: ten sam, stały kolor
-                lineColor: store.isLongMode ? 'rgba(0, 255, 0, 1)' : 'rgba(255, 0, 0, 1)',   // linia w tym samym kolorze
+                topColor: store.isLongMode ? 'rgba(0, 255, 0, 0.15)' : 'rgba(255, 0, 0, 0.15)',   // góra pozycji: zielony / czerwony
+                bottomColor: store.isLongMode ? 'rgba(0, 255, 0, 0.15)' : 'rgba(255, 0, 0, 0.15)', // dół pozycji: ten sam, stały kolor
+                lineColor: store.isLongMode ? 'rgba(0, 255, 0, 0.15)' : 'rgba(255, 0, 0, 0.15)',   // linia w tym samym kolorze
                 lineWidth: 1,
                 priceLineVisible: false,
                 lastValueVisible: false,
