@@ -260,8 +260,6 @@ def symbol_date_view(request, symbol, start_date):
         # Wybierz odpowiednią bibliotekę wykresów
         if chart_lib == 'lightweight':
             return chart_view.generate_lightweight_chart(data, db_symbol, request)
-        elif chart_lib == 'plotly':  # oryginalna interaktywna
-            return chart_view.generate_interactive_chart(data, db_symbol, request)
         else:  # statyczna
             return chart_view.generate_candlestick_chart(data, db_symbol, request)
         
@@ -318,8 +316,6 @@ def symbol_date_range_view(request, symbol, start_date, end_date):
         # Wybierz odpowiednią bibliotekę wykresów
         if chart_lib == 'lightweight':
             return chart_view.generate_lightweight_chart(data, db_symbol, request)
-        elif chart_lib == 'plotly':  # oryginalna interaktywna
-            return chart_view.generate_interactive_chart(data, db_symbol, request)
         else:  # statyczna
             return chart_view.generate_candlestick_chart(data, db_symbol, request)
     
