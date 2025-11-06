@@ -1,15 +1,18 @@
 import { store } from './store.js';
 import { prepareCandleData } from './utils.js';
 
+const tfMinutes = {
+    '1m': 1,
+    '5m': 5,
+    '15m': 15,
+    '1h': 60,
+    '4h': 240,
+    '1d': 1440
+};
+
 export function getCurrentTimeframe() {
-    if (typeof currentTimeframe !== 'undefined') {
-        return currentTimeframe;
-    }
     const activeBtn = document.querySelector('.timeframe-btn.active');
-    if (activeBtn) {
-        return activeBtn.dataset.tf;
-    }
-    return null;
+    return activeBtn ? activeBtn.dataset.tf : null;
 }
 
 export function getCurrentCandles() {
@@ -27,16 +30,9 @@ export function getInitialReplayIndex() {
     const candles = getCurrentCandles();
     if (!tf || !candles.length) return 1;
 
-    const tfMinutes = {
-        '1m': 1,
-        '5m': 5,
-        '15m': 15,
-        '1h': 60,
-        '4h': 240,
-        '1d': 1440
-    };
     const minutes = tfMinutes[tf] || 1;
     const barsFor4h = Math.round(240 / minutes);
+    console.log("WYWOŁANO getInitialReplayIndex ")
     return Math.min(barsFor4h, candles.length);
 }
 
@@ -100,9 +96,8 @@ export function updateBarReplay() {
 
     const status = document.getElementById('bar-replay-status');
     if (status) {
-        const totalCount = (typeof window.totalCandlesCount === 'number' && window.totalCandlesCount > 0)
-    ? window.totalCandlesCount
-    : candles.length;
+        const candles = getCurrentCandles();
+        const totalCount = candles.length;
         status.textContent = `Pokazano ${replayIndex} z ${totalCount} świeczek`;
     }
 }
@@ -128,26 +123,26 @@ document.getElementById('bar-replay-reset').addEventListener('click', () => {
     updateBarReplay();
 });
 
-// Obsługa zmiany timeframe
 document.querySelectorAll('.timeframe-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-        setTimeout(() => {
-            const newTf = btn.dataset.tf;
-            const tfMinutes = { '1m':1,'5m':5,'15m':15,'1h':60,'4h':240,'1d':1440 };
-            const oldMinutes = tfMinutes[prevTimeframe] || 1;
-            const newMinutes = tfMinutes[newTf] || 1;
+        const oldTf = getCurrentTimeframe();
+        const newTf = btn.dataset.tf;
 
-            const candles = getCurrentCandles();
-            if (candles.length) {
-                // przeliczamy replayIndex proporcjonalnie do nowego TF
-                replayIndex = Math.round(replayIndex * oldMinutes / newMinutes);
-                replayIndex = Math.min(replayIndex, candles.length);
-            } else {
-                replayIndex = 1;
-            }
+        document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
 
-            prevTimeframe = newTf;
-            updateBarReplay();
-        }, 0);
+        const oldMinutes = tfMinutes[oldTf] || 1;
+        const newMinutes = tfMinutes[newTf] || 1;
+
+        const newCandles = chartData[newTf] || [];
+        const newCount = newCandles.length;
+
+        let newReplayIndex = Math.round(replayIndex * (oldMinutes / newMinutes));
+        newReplayIndex = Math.max(1, Math.min(newReplayIndex, newCount));
+
+        replayIndex = newReplayIndex;
+        window.replayIndex = replayIndex;
+
+        updateBarReplay();
     });
 });
