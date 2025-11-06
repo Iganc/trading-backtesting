@@ -3,15 +3,7 @@ from django.views import View
 from django.http import HttpResponse, JsonResponse
 from .models import TimeSeriesData
 from datetime import datetime, timedelta
-import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.use('Agg')
 import pandas as pd
-import base64
-from io import BytesIO
-import mplfinance as mpf
-import plotly.graph_objects as go
-from plotly.offline import plot
 from django.db.models import Min, Max, Count
 from django.utils.timezone import make_aware
 from django.shortcuts import render
@@ -22,13 +14,10 @@ class GenericChartView(View):
     """Generyczny view dla wykresów finansowych"""
     
     def get(self, request, symbol=None, date=None, startdate=None, enddate=None):
-        # Mapowanie symboli
         symbol_mapping = {
             'ES': 'ES.v.0',
             'NQ': 'NQ.v.0'
         }
-        
-        # Konwersja symbolu na format w bazie danych
         if symbol:
             symbol = symbol_mapping.get(symbol.upper(), symbol)
         else:
@@ -44,7 +33,6 @@ class GenericChartView(View):
         chart_type = request.GET.get('chart', 'json')
         interactive = request.GET.get('interactive', 'false').lower() == 'true'
 
-        # Pobierz dane dla konkretnego symbolu
         base_query = TimeSeriesData.objects.filter(symbol=symbol)
         
         if date:
@@ -79,119 +67,6 @@ class GenericChartView(View):
                 'count': data.count()
             })
     
-    def generate_interactive_chart(self, data, symbol, request=None):
-        """Generuje interaktywny wykres dla dowolnego symbolu"""
-        df_data = list(data.values('date', 'open', 'high', 'low', 'close', 'volume'))
-        df = pd.DataFrame(df_data)
-        
-        if df.empty:
-            return JsonResponse({'error': 'Brak danych do wykresu'}, status=404)
-    
-        # Konwertuj daty
-        df['date'] = pd.to_datetime(df['date'])
-        df.set_index('date', inplace=True)
-        df = df.sort_index()
-    
-        # Przygotuj dane dla różnych timeframe'ów
-        timeframes = {
-            '1m': df,  # Oryginalne dane minutowe
-            '5m': self._resample_data(df, '5T'),
-            '15m': self._resample_data(df, '15T'),
-            '1h': self._resample_data(df, '1H'),
-            '4h': self._resample_data(df, '4H'),
-            '1d': self._resample_data(df, '1D'),
-        }
-    
-        # Stwórz subplot z przyciskami
-        from plotly.subplots import make_subplots
-        
-        fig = go.Figure()
-    
-        # Dodaj wszystkie timeframe'y jako traces (początkowo ukryte)
-        for tf, tf_data in timeframes.items():
-            if not tf_data.empty:
-                fig.add_trace(
-                    go.Candlestick(
-                        x=tf_data.index,
-                        open=tf_data['open'],
-                        high=tf_data['high'],
-                        low=tf_data['low'],
-                        close=tf_data['close'],
-                        name=f'{symbol} ({tf})',
-                        visible=(tf == '1h')  # Domyślnie pokaż 1h
-                    )
-                )
-    
-        # Stwórz przyciski do przełączania timeframe'ów
-        buttons = []
-        for i, (tf, tf_data) in enumerate(timeframes.items()):
-            if not tf_data.empty:
-                visible = [False] * len(timeframes)
-                visible[i] = True
-                
-                buttons.append(
-                    dict(
-                        label=tf,
-                        method="update",
-                        args=[
-                            {"visible": visible},
-                            {"title": f"{symbol} - {tf} Timeframe"}
-                        ]
-                    )
-                )
-    
-        # Konfiguracja
-        fig.update_layout(
-            title=f'{symbol} - 1h Timeframe',
-            yaxis_title='Price ($)',
-            xaxis_title='Date',
-            template='plotly_white',
-            height=700,
-            showlegend=False,
-            xaxis_rangeslider_visible=False,
-            hovermode='x unified',
-            updatemenus=[
-                dict(
-                    type="buttons",
-                    direction="left",
-                    buttons=buttons,
-                    pad={"r": 10, "t": 10},
-                    showactive=True,
-                    x=0.01,
-                    xanchor="left",
-                    y=1.02,
-                    yanchor="top"
-                ),
-            ]
-        )
-    
-        graph_html = plot(fig, output_type='div', include_plotlyjs=True)
-        
-        count = data.count()
-        first_date = df.index.min().strftime('%Y-%m-%d %H:%M')
-        last_date = df.index.max().strftime('%Y-%m-%d %H:%M')
-        
-        # Pokazujemy "czytelny" symbol (ES zamiast ES.v.0)
-        display_symbol = symbol
-        if symbol == 'ES.v.0':
-            display_symbol = 'ES'
-        elif symbol == 'NQ.v.0':
-            display_symbol = 'NQ'
-        
-        context = {
-            'display_symbol': display_symbol,
-            'count': count,
-            'first_date': first_date,
-            'last_date': last_date,
-            'graph_html': graph_html
-        }
-
-        req = request if request is not None else getattr(self, 'request', None)
-        if req is None:
-            raise ValueError("Request object is required for rendering template")
-        
-        return render(req, 'backtest_app/interactive_chart.html', context)
-
     def generate_lightweight_chart(self, data, symbol, request=None):
         """Generuje wykres używając biblioteki Lightweight Charts"""
         df_data = list(data.values('date', 'open', 'high', 'low', 'close', 'volume'))
@@ -200,24 +75,19 @@ class GenericChartView(View):
         if df.empty:
             return JsonResponse({'error': 'Brak danych do wykresu'}, status=404)
 
-        # Konwertuj daty
         df['date'] = pd.to_datetime(df['date'])
         df.set_index('date', inplace=True)
         df = df.sort_index()
         
-        # Automatyczne dostosowanie rozdzielczości danych dla dużych zakresów
         data_points = len(df)
         date_range_days = (df.index.max() - df.index.min()).days
         data_warning = None
         
-        # Określ czy mamy za dużo danych dla minutowego timeframe'a
         if date_range_days > 5 and data_points > 50000:
             data_warning = f"Duży zbiór danych ({data_points:,} punktów). Niektóre timeframe'y zostały automatycznie zagregowane dla lepszej wydajności."
         
-        # Przygotuj dane dla różnych timeframe'ów
         timeframes = {}
         
-        # Funkcja do konwersji danych na format dla Lightweight Charts
         def convert_to_lightweight_format(df):
             result = []
             for idx, row in df.iterrows():
@@ -233,26 +103,21 @@ class GenericChartView(View):
                 })
             return result
         
-        # Dodaj timeframe'y z ograniczeniem ilości danych
-        # Minutowe dane tylko jeśli zakres jest rozsądny
         if date_range_days <= 5 or data_points <= 50000:
             timeframes['1m'] = convert_to_lightweight_format(df)
         
-        # Dla pozostałych timeframe'ów zawsze agreguj
         timeframes['5m'] = convert_to_lightweight_format(self._resample_data(df, '5T'))
         timeframes['15m'] = convert_to_lightweight_format(self._resample_data(df, '15T'))
         timeframes['1h'] = convert_to_lightweight_format(self._resample_data(df, '1H'))
         timeframes['4h'] = convert_to_lightweight_format(self._resample_data(df, '4H'))
         timeframes['1d'] = convert_to_lightweight_format(self._resample_data(df, '1D'))
         
-        # Pokazujemy "czytelny" symbol (ES zamiast ES.v.0)
         display_symbol = symbol
         if symbol == 'ES.v.0':
             display_symbol = 'ES'
         elif symbol == 'NQ.v.0':
             display_symbol = 'NQ'
         
-        # Konwertuj dane na format JSON
         chart_data_json = json.dumps(timeframes)
         
         count = data.count()
@@ -292,73 +157,10 @@ class GenericChartView(View):
             print(f"Error resampling to {frequency}: {e}")
             return pd.DataFrame()
     
-    def generate_candlestick_chart(self, data, symbol, request=None):
-        """Generuje statyczny wykres świeczek"""
-        df_data = list(data.values('date', 'open', 'high', 'low', 'close', 'volume'))
-        df = pd.DataFrame(df_data)
-        
-        if df.empty:
-            return JsonResponse({'error': 'Brak danych do wykresu'}, status=404)
-    
-        df['date'] = pd.to_datetime(df['date'])
-        df.set_index('date', inplace=True)
-        
-        df.rename(columns={
-            'open': 'Open', 'high': 'High', 'low': 'Low',
-            'close': 'Close', 'volume': 'Volume'
-        }, inplace=True)
-        
-        # Wykres
-        fig, axes = mpf.plot(
-            df,
-            type='candle',
-            style='yahoo',
-            title=f'{symbol} Candlestick Chart',
-            ylabel='Price ($)',
-            volume=False,
-            figsize=(12, 8),
-            returnfig=True,
-            tight_layout=True,
-            show_nontrading=True  # Pokaż wszystkie dane (24/7)
-        )
-        
-        # Zapisz jako obraz
-        buffer = BytesIO()
-        fig.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
-        buffer.seek(0)
-        
-        image_base64 = base64.b64encode(buffer.getvalue()).decode()
-        plt.close(fig)
-        
-        # Użyj pandas DataFrame dla dat
-        first_date = df.index.min()
-        last_date = df.index.max()
-        
-        # Pokazujemy "czytelny" symbol (ES zamiast ES.v.0)
-        display_symbol = symbol
-        if symbol == 'ES.v.0':
-            display_symbol = 'ES'
-        elif symbol == 'NQ.v.0':
-            display_symbol = 'NQ'
-        
-        context = {
-            'display_symbol': display_symbol,
-            'data': data,
-            'first_date': first_date,
-            'last_date': last_date,
-            'image_base64': image_base64
-        }
-        
-        req = request if request is not None else getattr(self, 'request', None)
-        if req is None:
-            raise ValueError("Request object is required for rendering template")
-        
-        return render(req, 'backtest_app/interactive_chart.html', context)
 
 def home_view(request):
     """Strona główna z odnośnikami do ES i NQ"""
     
-    # Pobierz dane o dostępnych zakresach dla ES.v.0 i NQ.v.0
     symbols = {
         'ES': 'ES.v.0',
         'NQ': 'NQ.v.0'
@@ -366,7 +168,6 @@ def home_view(request):
     
     data = {}
     for display_symbol, db_symbol in symbols.items():
-        # Pobierz najnowsze dane dla symbolu
         latest = TimeSeriesData.objects.filter(symbol=db_symbol).order_by('-date').first()
         earliest = TimeSeriesData.objects.filter(symbol=db_symbol).order_by('date').first()
         
