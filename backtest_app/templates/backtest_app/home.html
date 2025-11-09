@@ -5,59 +5,87 @@
 {% block title %}Continuous Contract Backtesting{% endblock %}
 
 {% block content %}
-    {% if user.is_authenticated %}
-        <p>Witaj, {{ user.username }}! 
-            <form action="{% url 'logout' %}" method="post" style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="btn">Wyloguj się</button>
-            </form>
-        </p>
-        <select id="session-select">
-            <option value="">-- wybierz sesję --</option>
-            {% for s in user_sessions %}
-            <option value="{{ s.id }}">{{ s.name }}</option>
-            {% endfor %}
-        </select>
-        <button id="load-session-btn">Wczytaj sesję</button>
-
-    {% else %}
-        <p>
-            <a class="btn" href="{% url 'login' %}">Zaloguj się</a>
-            <a class="btn" href="{% url 'register' %}">Rejestracja</a>
-        </p>
-    {% endif %}
-    <h1>Continuous Contract Backtesting</h1>
-    
-    {% for symbol, info in data.items %}
-        <div class="card">
-            <h2>{{ symbol }} Futures</h2>
-            <div class="price">${{ info.latest_price|floatformat:2 }}</div>
-            <p>Dane dostępne od: {{ info.earliest_date }} do {{ info.latest_date }}</p>
-            <p>Liczba rekordów: {{ info.total_records | intcomma }}</p>
-            
-            <div class="links">
-                <h3>Popularne zakresy dat:</h3>
-                <a class="btn" href="/{{ symbol }}/{{ last_week }}/{{ today }}/">Ostatni tydzień</a>
-                <a class="btn" href="/{{ symbol }}/{{ last_month }}/{{ today }}/">Ostatni miesiąc</a>
-                <a class="btn" href="/{{ symbol }}/{{ last_year }}/{{ today }}/">Ostatni rok</a>
-                <a class="btn" href="/{{ symbol }}/{{ info.earliest_date }}/{{ info.latest_date }}/">Wszystkie dane</a>
-                <a class="btn" href="/{{ symbol }}/{{ info.earliest_date }}/">Od początku</a>
-                <a class="btn" href="{% url 'symbol_date_range' symbol='ES' start_date=random_date_from end_date=random_date_to %}">
-                    Losowy tydzień ({{random_date_from}} - {{random_date_to}})
-                </a>
-            </div>
-            
-            <div class="links">
-                <h3>Formularz wyboru daty:</h3>
-                <form action="javascript:void(0);" id="{{ symbol }}Form">
-                    <input type="date" name="start_date" required min="{{ info.earliest_date }}" max="{{ info.latest_date }}">
-                    <input type="date" name="end_date" min="{{ info.earliest_date }}" max="{{ info.latest_date }}">
-                    <button type="button" onclick="submitForm('{{ symbol }}')">Wyszukaj</button>
-                </form>
-            </div>
+<div class="top-bar">
+    <div class="left">
+        {% if user.is_authenticated %}
+        <div class="session-selector">
+            <select id="session-select">
+                <option value="">-- wybierz sesję --</option>
+                {% for s in user_sessions %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+            <button id="load-session-btn">Wczytaj</button>
         </div>
+        {% endif %}
+    </div>
+
+    <div class="right login-box">
+        {% if user.is_authenticated %}
+        <span>Witaj, {{ user.username }}!</span>
+        <form action="{% url 'logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit">Wyloguj</button>
+        </form>
+        {% else %}
+        <div class="right login-box">
+            <button onclick="window.location.href='{% url 'login' %}'">Zaloguj</button>
+            <button onclick="window.location.href='{% url 'register' %}'">Rejestracja</button>
+        </div>
+
+        {% endif %}
+    </div>
+</div>
+
+
+<h1>Continuous Contract Backtesting</h1>
+
+<div class="instrument-select">
+    <label for="instrument-select">Wybierz instrument:</label>
+    <select id="instrument-select" onchange="showInstrumentCard()">
+        <option value="">-- wybierz --</option>
+        {% for symbol, info in data.items %}
+            <option value="{{ symbol }}">{{ symbol }} ({{ info.latest_price|floatformat:2 }} USD)</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div class="instrument-grid">
+    {% for symbol, info in data.items %}
+    <div class="instrument-tile" onclick="showInstrumentCard('{{ symbol }}')">
+        <h2>{{ symbol }}</h2>
+        <p class="price">${{ info.latest_price|floatformat:2 }}</p>
+    </div>
     {% endfor %}
+</div>
+
+{% for symbol, info in data.items %}
+<div class="card instrument-card" id="card-{{ symbol }}" style="display:none;">
+    <h2>{{ symbol }} Futures</h2>
+    <div class="price">${{ info.latest_price|floatformat:2 }}</div>
+    <div class="links">
+        <h3>Popularne zakresy dat:</h3>
+        <a class="btn" href="{% url 'symbol_date_range' symbol=symbol start_date=random_date_from end_date=random_date_to %}">Losowy tydzień</a>
+        <a class="btn" href="/{{ symbol }}/{{ info.week_ago }}/{{ info.latest_date }}/">Ostatni tydzień</a>
+        <a class="btn" href="/{{ symbol }}/{{ info.month_ago }}/{{ info.latest_date }}/">Ostatni miesiąc</a>
+        <a class="btn" href="/{{ symbol }}/{{ last_year }}/{{ today }}/">Ostatni rok</a>
+        <a class="btn" href="/{{ symbol }}/{{ info.earliest_date }}/{{ info.latest_date }}/">Wszystkie dane</a>
+        <a class="btn" href="/{{ symbol }}/{{ info.earliest_date }}/">Od początku</a>
+    </div>
+    
+    <div class="links">
+        <h3>Formularz wyboru daty:</h3>
+        <form action="javascript:void(0);" id="{{ symbol }}Form">
+            <input type="date" name="start_date" required min="{{ info.earliest_date }}" max="{{ info.latest_date }}">
+            <input type="date" name="end_date" min="{{ info.earliest_date }}" max="{{ info.latest_date }}">
+            <button type="button" onclick="submitForm('{{ symbol }}')">Wyszukaj</button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+
 {% endblock %}
+
 
 {% block scripts %}
     <script>
@@ -74,6 +102,20 @@
                 alert('Podaj przynajmniej datę początkową');
             }
         }
+
+        function showInstrumentCard(symbol = null) {
+            const value = symbol || document.getElementById('instrument-select').value;
+
+            document.querySelectorAll('.instrument-card').forEach(card => {
+                card.style.display = 'none';
+            });
+
+            if (value) {
+                document.getElementById('card-' + value).style.display = 'block';
+            }
+        }
+
+
         document.getElementById('load-session-btn').addEventListener('click', () => {
             const select = document.getElementById('session-select');
             const sessionId = select.value;

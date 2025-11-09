@@ -1,9 +1,20 @@
-<h2>Informacje o koncie</h2>
-<p>Nazwa użytkownika: {{ user.username }}</p>
-<p>Email: {{ user.email }}</p>
-<p>Data rejestracji: {{ user.date_joined }}</p>
+{% extends 'backtest_app/base.html' %}
+<!-- {% load static %} -->
 
-<form action="{% url 'delete_account' %}" method="post" style="margin-top:20px;">
-    {% csrf_token %}
-    <button type="submit" onclick="return confirm('Czy na pewno chcesz usunąć konto?');">Usuń konto</button>
-</form>
+{% block title %}Konto użytkownika{% endblock %}
+
+{% block content %}
+<div class="account-container">
+    <h2>Informacje o koncie</h2>
+    <p><strong>Nazwa użytkownika:</strong> {{ user.username }}</p>
+    <p><strong>Email:</strong> {{ user.email }}</p>
+    <p><strong>Data rejestracji:</strong> {{ user.date_joined|date:"Y-m-d H:i" }}</p>
+
+    <form action="{% url 'delete_account' %}" method="post" class="delete-form">
+        {% csrf_token %}
+        <button type="submit" class="btn-delete" onclick="return confirm('Czy na pewno chcesz usunąć konto?');">
+            Usuń konto
+        </button>
+    </form>
+</div>
+{% endblock %}

@@ -1,7 +1,15 @@
-<h2>Rejestracja</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Zarejestruj</button>
-</form>
-<p>Masz już konto? <a href="{% url 'login' %}">Zaloguj się</a></p>
+{% extends 'backtest_app/base.html' %}
+
+{% block title %}Rejestracja{% endblock %}
+
+{% block content %}
+<div class="register-container">
+    <h2>Rejestracja</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn-register">Zarejestruj</button>
+    </form>
+    <p>Masz już konto? <a href="{% url 'login' %}">Zaloguj się</a></p>
+</div>
+{% endblock %}

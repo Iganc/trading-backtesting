@@ -176,7 +176,9 @@ def home_view(request):
                 'latest_date': latest.date.strftime('%Y-%m-%d'),
                 'earliest_date': earliest.date.strftime('%Y-%m-%d'),
                 'latest_price': latest.close,
-                'total_records': TimeSeriesData.objects.filter(symbol=db_symbol).count()
+                'total_records': TimeSeriesData.objects.filter(symbol=db_symbol).count(),
+                'week_ago': (latest.date - timedelta(days=7)).strftime('%Y-%m-%d'),
+                'month_ago': (latest.date - timedelta(days=30)).strftime('%Y-%m-%d'),
             }
     import random
     start = earliest.date
