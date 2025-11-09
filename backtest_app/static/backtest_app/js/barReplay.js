@@ -98,7 +98,10 @@ export function updateBarReplay() {
     if (status) {
         const candles = getCurrentCandles();
         const totalCount = candles.length;
-        status.textContent = `Pokazano ${replayIndex} z ${totalCount} świeczek`;
+        status.innerHTML = `
+            <span class="material-symbols-outlined" style="font-size:20px; color:#007bff; vertical-align:middle;">candlestick_chart</span>
+            Pokazano <b>${replayIndex}</b> z <b>${totalCount}</b> świeczek
+        `;
     }
 }
 

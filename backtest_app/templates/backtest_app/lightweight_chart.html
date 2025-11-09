@@ -17,7 +17,7 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
 .timeframe-buttons { display:flex; gap:10px; margin-bottom:10px; }
 .timeframe-btn { padding:8px 16px; background:#e0e0e0; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }
 .timeframe-btn.active { background:#007bff; color:white; }
-.drawing-tools { display:flex; flex-direction:column; gap:10px; }
+.drawing-tools { display:flex; flex-direction:column; gap:10px; align-items: center; justify-content: center; }
 .drawing-btn {
     width: 40px;
     height: 40px;
@@ -32,14 +32,43 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
 }
 .drawing-btn.active { background:#ff7043; color:white; }
 #save-session-btn {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 100;
+    margin-top: 30px;
+    width: 75%;
+    align-self: center;
+    background: #007bff;
+    color: #fff;
+    border-radius: 4px;
+    border: none;
+    padding: 10px 0;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+#save-session-btn:hover {
+    background: #0056b3;
+}
+.md-btn {
+    background: #e0e0e0;
+    border: none;
+    border-radius: 4px;
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+.md-btn:hover {
+    background: #bdbdbd;
+}
+.material-symbols-outlined {
+    font-size: 24px;
+    color: #333;
 }
 </style>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+
 {% endblock %}
 
 {% block content %}
@@ -53,11 +82,19 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
             <button class="timeframe-btn" data-tf="4h">4h</button>
             <button class="timeframe-btn" data-tf="1d">1d</button>
         </div>
-        <div id="bar-replay-controls" style="display: flex; gap: 10px;">
-            <button id="bar-replay-prev">◀</button>
-            <button id="bar-replay-next">▶</button>
-            <button id="bar-replay-fast">+5</button>
-            <button id="bar-replay-reset">Reset</button>
+        <div id="bar-replay-controls" style="display: flex; gap: 10px; align-items: center;">
+            <button id="bar-replay-prev" class="md-btn" title="Poprzedni">
+                <span class="material-symbols-outlined">arrow_left</span>
+            </button>
+            <button id="bar-replay-next" class="md-btn" title="Następny">
+                <span class="material-symbols-outlined">arrow_right</span>
+            </button>
+            <button id="bar-replay-fast" class="md-btn" title="Szybko +5">
+                <span class="material-symbols-outlined">forward_5</span>
+            </button>
+            <button id="bar-replay-reset" class="md-btn" title="Reset">
+                <span class="material-symbols-outlined">restart_alt</span>
+            </button>
             <span id="bar-replay-status"></span>
         </div>
     </div>
@@ -72,8 +109,8 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
             <button id="line-tool" class="drawing-btn" title="Line">
                 <span class="material-icons">show_chart</span>
             </button>
-            <button id="fib-tool" class="drawing-btn" title="Fib">
-                <span class="material-icons">timeline</span>
+            <button id="fib-tool" class="drawing-btn" title="Density Small">
+                <span class="material-icons">density_small</span>
             </button>
             <button id="rect-tool" class="drawing-btn" title="Rect">
                 <span class="material-icons">crop_square</span>
@@ -82,10 +119,10 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
                 <span class="material-icons">clear</span>
             </button>
             <button id="magnet-tool" class="drawing-btn" title="Magnes">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <rect x="7" y="2" width="10" height="20" rx="5" fill="#333"/>
-                    <rect x="9" y="4" width="6" height="8" rx="3" fill="#ff7043"/>
-                </svg>
+                <span class="material-icons">filter_alt</span>
+            </button>
+            <button id="save-session-btn">
+                <span class="material-icons">save</span>
             </button>
         </div>
         <div class="main-chart" style="flex:1; display:flex; flex-direction:column; min-height:0;">
@@ -108,7 +145,6 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
             display: none; /* możesz pokazywać/ukrywać w JS */
         ">
     </div>
-    <button id="save-session-btn">Zapisz sesję</button>
 </div>
 {% endblock %}
 
