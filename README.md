@@ -55,3 +55,25 @@ Each user has an individual balance and can save or restore backtesting sessions
 ## Author
 
 Developed as an educational project to explore, test, and visualize trading strategies on historical futures data.
+
+## Photo Gallery
+
+home: 
+<img width="1926" height="924" alt="image" src="https://github.com/user-attachments/assets/e810d27f-9ee9-4799-b661-d7840461b1c2" />
+
+choosing an instrument and the time:
+<img width="1905" height="888" alt="image" src="https://github.com/user-attachments/assets/81dcb01a-cc05-4524-92fd-8eb92f077254" />
+
+after choosing an instrument:
+<img width="1914" height="914" alt="image" src="https://github.com/user-attachments/assets/f113f92b-bd21-4f79-9aa8-c0a415907a91" />
+
+after using bar replay:
+<img width="1914" height="915" alt="image" src="https://github.com/user-attachments/assets/986dd558-b27e-4483-9103-69040e7818fc" />
+
+drawing:
+<img width="1922" height="926" alt="image" src="https://github.com/user-attachments/assets/4066413d-0b14-4b70-a3dd-4685ab4c64c7" />
+
+opened positions:
+<img width="1913" height="918" alt="image" src="https://github.com/user-attachments/assets/fc815bdb-f911-4edd-9410-d49eef22368d" />
+
+
