@@ -111,15 +111,72 @@ window.addEventListener('load', () => {
 });
 
 document.getElementById('save-session-btn').addEventListener('click', async () => {
+    if (window.session_id) {
+        const candles = window.candles || [];
+        const visibleCandles = window.replayIndex || candles.length;
+        const totalCandles = candles.length;
+        const currentCandleIndex = Math.max(0, visibleCandles - 1);
+        const currentCandle = candles[currentCandleIndex] || null;
+
+        const name = document.getElementById('session-name')?.value.trim() || window.session_name || 'Aktualna sesja';
+        const balance = parseFloat(document.getElementById('session-balance')?.value) || window.session_balance || 100000;
+
+        const sessionData = {
+            name: name,
+            balance: balance,
+            parameters: {
+                symbol: window.display_symbol || '',
+                timeframe: store.currentTimeframe || '1h',
+                start_date: window.start_date || '',
+                end_date: window.end_date || ''
+            },
+            result: {
+                visible_candles: visibleCandles,
+                total_candles: totalCandles,
+                candles_data: candles,
+                current_candle: currentCandle
+            }
+        };
+
+        const url = `/save-session/${window.session_id}/`;
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': window.csrf_token || ''
+            },
+            body: JSON.stringify(sessionData)
+        });
+        const data = await response.json();
+        if (data.session_id) {
+            window.location.href = `/chart/session/${data.session_id}/`;
+        } else if (data.error) {
+            alert('Błąd: ' + data.error);
+        }
+    } else {
+        document.getElementById('save-session-modal').style.display = 'flex';
+    }
+});
+
+document.getElementById('confirm-save-session').addEventListener('click', async () => {
     try {
         const candles = window.candles || [];
         const visibleCandles = window.replayIndex || candles.length;
         const totalCandles = candles.length;
         const currentCandleIndex = Math.max(0, visibleCandles - 1);
         const currentCandle = candles[currentCandleIndex] || null;
-        
+
+        const name = document.getElementById('session-name').value.trim();
+        const balance = parseFloat(document.getElementById('session-balance').value) || 100000;
+
+        if (!name) {
+            alert('Podaj nazwę sesji!');
+            return;
+        }
+
         const sessionData = {
-            name: `${window.display_symbol || 'Sesja'} - ${window.start_date || ''}`,
+            name: name,
+            balance: balance,
             parameters: {
                 symbol: window.display_symbol || '',
                 timeframe: store.currentTimeframe || '1h',
@@ -144,7 +201,9 @@ document.getElementById('save-session-btn').addEventListener('click', async () =
         });
         const data = await response.json();
         if (data.session_id) {
-            alert('Sesja zapisana! ID: ' + data.session_id);
+            console.log('Sesja zapisana! ID: ' + data.session_id);
+            document.getElementById('save-session-modal').style.display = 'none';
+            window.location.href = `/chart/session/${data.session_id}/`;
         } else if (data.error) {
             alert('Błąd: ' + data.error);
         }
@@ -153,5 +212,8 @@ document.getElementById('save-session-btn').addEventListener('click', async () =
         console.error(err);
         alert('Wystąpił błąd przy zapisie sesji.');
     }
+});
+document.getElementById('cancel-save-session').addEventListener('click', () => {
+    document.getElementById('save-session-modal').style.display = 'none';
 });
 //TODO: turn off magnet mode (temporarily) when pressing shift and drawing a line 

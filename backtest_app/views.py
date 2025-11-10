@@ -186,18 +186,15 @@ def home_view(request):
     usable_range_start = start + timedelta(days=3)  
     usable_range_end = end - timedelta(days=3) 
     if usable_range_start <= usable_range_end:
-        # Losuj datę z użytecznego zakresu
         random_timestamp = random.randint(
             int(usable_range_start.timestamp()),
             int(usable_range_end.timestamp())
         )
         random_date = datetime.fromtimestamp(random_timestamp).date()
     else:
-        # Jeśli zakres jest zbyt mały, po prostu użyj środkowego punktu
         middle_point = start + (end - start) / 2
         random_date = middle_point.date()
     
-    # Stwórz zakres dat (+/- 3 dni)
     random_date_from = random_date - timedelta(days=3)
     random_date_to = random_date + timedelta(days=3)
     today = datetime.now().strftime('%Y-%m-%d')
@@ -224,16 +221,13 @@ def home_view(request):
 
 def symbol_date_view(request, symbol, start_date):
     """Widok dla symbolu od daty początkowej do końca dostępnych danych"""
-    # Tłumaczenie symboli
     symbol_mapping = {
         'ES': 'ES.v.0',
         'NQ': 'NQ.v.0'
     }
     
-    # Konwersja symbolu na format w bazie danych
     db_symbol = symbol_mapping.get(symbol.upper(), symbol)
     
-    # Parametry
     chart_type = request.GET.get('chart', 'chart')
     interactive = request.GET.get('interactive', 'true').lower() == 'true'
     
@@ -242,7 +236,6 @@ def symbol_date_view(request, symbol, start_date):
     except ValueError:
         return JsonResponse({'error': 'Nieprawidłowy format daty początkowej (YYYY-MM-DD)'}, status=400)
     
-    # Pobierz dane od daty początkowej
     data = TimeSeriesData.objects.filter(
         symbol=db_symbol,
         date__gte=start_date_obj
@@ -253,19 +246,16 @@ def symbol_date_view(request, symbol, start_date):
             'error': f'Brak danych dla symbolu {symbol} od daty {start_date}'
         }, status=404)
     
-    # Jeśli proszono o wykres
     if chart_type == 'chart':
         chart_view = GenericChartView()
         
-        chart_lib = request.GET.get('lib', 'lightweight')  # domyślnie używaj lightweight
+        chart_lib = request.GET.get('lib', 'lightweight')
         
-        # Wybierz odpowiednią bibliotekę wykresów
         if chart_lib == 'lightweight':
             return chart_view.generate_lightweight_chart(data, db_symbol, request)
-        else:  # statyczna
+        else: 
             return chart_view.generate_candlestick_chart(data, db_symbol, request)
         
-    # W przeciwnym razie zwróć JSON
     return JsonResponse({
         'symbol': symbol,
         'db_symbol': db_symbol,
@@ -278,19 +268,15 @@ def symbol_date_view(request, symbol, start_date):
 
 def symbol_date_range_view(request, symbol, start_date, end_date):
     """Widok dla symbolu z zakresem dat"""
-    # Tłumaczenie symboli
     symbol_mapping = {
         'ES': 'ES.v.0',
         'NQ': 'NQ.v.0'
     }
     
-    # Konwersja symbolu na format w bazie danych
     db_symbol = symbol_mapping.get(symbol.upper(), symbol)
     
-    # Parametry
     chart_type = request.GET.get('chart', 'chart')
-    chart_lib = request.GET.get('lib', 'lightweight')  # domyślnie używaj lightweight
-    
+    chart_lib = request.GET.get('lib', 'lightweight') 
     interactive = request.GET.get('interactive', 'true').lower() == 'true'
     
     try:
@@ -299,7 +285,6 @@ def symbol_date_range_view(request, symbol, start_date, end_date):
     except ValueError:
         return JsonResponse({'error': 'Nieprawidłowy format daty (YYYY-MM-DD)'}, status=400)
     
-    # Pobierz dane w zakresie dat
     data = TimeSeriesData.objects.filter(
         symbol=db_symbol,
         date__gte=start_date_obj,
@@ -311,17 +296,14 @@ def symbol_date_range_view(request, symbol, start_date, end_date):
             'error': f'Brak danych dla symbolu {symbol} w zakresie {start_date} - {end_date}'
         }, status=404)
     
-    # Jeśli proszono o wykres
     if chart_type == 'chart':
         chart_view = GenericChartView()
         
-        # Wybierz odpowiednią bibliotekę wykresów
         if chart_lib == 'lightweight':
             return chart_view.generate_lightweight_chart(data, db_symbol, request)
-        else:  # statyczna
+        else: 
             return chart_view.generate_candlestick_chart(data, db_symbol, request)
     
-    # W przeciwnym razie zwróć JSON
     return JsonResponse({
         'symbol': symbol,
         'db_symbol': db_symbol,
@@ -332,16 +314,6 @@ def symbol_date_range_view(request, symbol, start_date, end_date):
     })
 
 
-def available_contracts(request):
-    """Zwraca listę dostępnych kontraktów z zakresami dat"""
-    contracts = TimeSeriesData.objects.values('symbol').annotate(
-        start_date=Min('date'),
-        end_date=Max('date'),
-        count=Count('id')
-    ).order_by('start_date')
-    
-    return JsonResponse(list(contracts), safe=False)
-
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from .models import BacktestingSession
@@ -349,27 +321,31 @@ from .models import BacktestingSession
 @csrf_exempt
 @login_required
 def save_backtesting_session(request):
-    """Zapisuje sesję backtestingu (parametry + wynik)"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Metoda niedozwolona'}, status=405)
 
     try:
         data = json.loads(request.body)
-        name = data.get('name', '')
+        name = data.get('name', '').strip()
+        if not name:
+            return JsonResponse({'error': 'Nazwa sesji jest wymagana'}, status=400)
+        balance = float(data.get('balance', 100000))
         parameters = data.get('parameters', {})
         result = data.get('result', {})
-        account_state = data.get('account_state', {}) 
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Niepoprawny format JSON'}, status=400)
+        account_state = data.get('account_state', {'balance': balance})
+        start_date = data.get('start_date', '')
+        end_date = data.get('end_date', '')
+        symbol = data.get('symbol', '')
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Niepoprawny format danych'}, status=400)
 
     session = BacktestingSession.objects.create(
         user=request.user,
         name=name,
-        parameters=parameters,
+        parameters={**parameters, 'symbol': symbol, 'start_date': start_date, 'end_date': end_date},
         result=result,
         account_state=account_state
     )
-    print("FROM save_backtesting_session: ", session)
     return JsonResponse({'message': 'Sesja zapisana', 'session_id': session.id}, status=201)
 
 @login_required
@@ -444,6 +420,30 @@ def chart_from_session(request, session_id):
         'session_total_candles': session_total_candles,
         'current_candle': json.dumps(session.result.get('current_candle', {})),
         'account_state': session.account_state,
+        'session_name': session.name,
+    'session_balance': session.account_state.get('balance', 100000),
     }
 
     return render(request, 'backtest_app/lightweight_chart.html', context)
+
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+@login_required
+def update_backtesting_session(request, session_id):
+    if request.method != 'PUT':
+        return JsonResponse({'error': 'Metoda niedozwolona'}, status=405)
+    try:
+        session = BacktestingSession.objects.get(id=session_id, user=request.user)
+    except BacktestingSession.DoesNotExist:
+        return JsonResponse({'error': 'Nie znaleziono sesji'}, status=404)
+    try:
+        data = json.loads(request.body)
+        session.name = data.get('name', session.name)
+        session.parameters = data.get('parameters', session.parameters)
+        session.result = data.get('result', session.result)
+        session.account_state = data.get('account_state', session.account_state)
+        session.save()
+        return JsonResponse({'message': 'Sesja zaktualizowana', 'session_id': session.id}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
