@@ -76,4 +76,11 @@ drawing:
 opened positions:
 <img width="1913" height="918" alt="image" src="https://github.com/user-attachments/assets/fc815bdb-f911-4edd-9410-d49eef22368d" />
 
+saving a session:
+<img width="1914" height="914" alt="image" src="https://github.com/user-attachments/assets/e51e6d30-536f-4e0c-bc35-419c3c3d1f1a" />
+
+
+tracking the balance from a saved session:
+<img width="1915" height="909" alt="image" src="https://github.com/user-attachments/assets/02fa7e90-5bc0-43ed-a13f-d177e69521e6" />
+
 
