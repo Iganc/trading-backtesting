@@ -11,7 +11,6 @@ from django.contrib.humanize.templatetags.humanize import intcomma
 import json
 
 class GenericChartView(View):
-    """Generyczny view dla wykresów finansowych"""
     
     def get(self, request, symbol=None, date=None, startdate=None, enddate=None):
         symbol_mapping = {
@@ -50,7 +49,7 @@ class GenericChartView(View):
             except ValueError:
                 return JsonResponse({'error': 'Nieprawidłowy format daty (YYYY-MM-DD)'}, status=400)
         else:
-            data = base_query.order_by('date')[:1000]  # Pierwsze 1000 rekordów chronologicznie
+            data = base_query.order_by('date')[:1000] 
 
         if not data.exists():
             return JsonResponse({'error': f'Brak danych dla symbolu {symbol}'}, status=404)
@@ -91,7 +90,6 @@ class GenericChartView(View):
         def convert_to_lightweight_format(df):
             result = []
             for idx, row in df.iterrows():
-                # Konwersja timestamp do formatu unix timestamp (sekundy)
                 timestamp = int(idx.timestamp())
                 result.append({
                     'time': timestamp,
@@ -370,16 +368,65 @@ from django.utils.decorators import method_decorator
 
 @login_required
 def chart_from_session(request, session_id):
-    """Wczytuje dane wybranej sesji i renderuje lightweight_chart.html"""
     try:
         session = BacktestingSession.objects.get(id=session_id, user=request.user)
     except BacktestingSession.DoesNotExist:
         return JsonResponse({'error': 'Nie znaleziono sesji'}, status=404)
 
-    chart_data_dict = session.result.get('candles_data', [])
-    if not chart_data_dict:
+    # Pobierz minutowe dane
+    minute_candles = session.result.get('candles_data', [])
+    if not minute_candles:
         return JsonResponse({'error': 'Brak danych świec w sesji'}, status=404)
-    
+
+    # Konwertuj dane do DataFrame
+    df = pd.DataFrame(minute_candles)
+    df['time'] = pd.to_datetime(df['time'], unit='s')
+    df.set_index('time', inplace=True)
+    df = df.sort_index()
+
+    def resample_data(df, frequency):
+        """Resample data to different timeframes"""
+        if df.empty:
+            return df
+            
+        try:
+            resampled = df.resample(frequency).agg({
+                'open': 'first',
+                'high': 'max',
+                'low': 'min',
+                'close': 'last',
+                'volume': 'sum'
+            }).dropna()
+            return resampled
+        except Exception as e:
+            print(f"Error resampling to {frequency}: {e}")
+            return pd.DataFrame()
+
+    def convert_to_lightweight_format(df):
+        """Convert DataFrame to Lightweight Charts format"""
+        result = []
+        for idx, row in df.iterrows():
+            timestamp = int(idx.timestamp())
+            result.append({
+                'time': timestamp,
+                'open': float(row['open']),
+                'high': float(row['high']),
+                'low': float(row['low']),
+                'close': float(row['close']),
+                'volume': float(row['volume'])
+            })
+        return result
+
+    # Przygotuj dane dla różnych timeframe'ów
+    timeframes = {
+        '1m': minute_candles,  # oryginalne minutowe dane
+        '5m': convert_to_lightweight_format(resample_data(df, '5T')),
+        '15m': convert_to_lightweight_format(resample_data(df, '15T')),
+        '1h': convert_to_lightweight_format(resample_data(df, '1H')),
+        '4h': convert_to_lightweight_format(resample_data(df, '4H')),
+        '1d': convert_to_lightweight_format(resample_data(df, '1D'))
+    }
+
     symbol = session.parameters.get('symbol', 'ES')
     start_date = session.parameters.get('start_date', '')
     end_date = session.parameters.get('end_date', '')
@@ -390,8 +437,6 @@ def chart_from_session(request, session_id):
     }
     db_symbol = symbol_mapping.get(symbol.upper(), symbol)
 
-
-    from .models import TimeSeriesData
     if start_date and end_date:
         total_candles = TimeSeriesData.objects.filter(
             symbol=db_symbol,
@@ -407,11 +452,19 @@ def chart_from_session(request, session_id):
         total_candles = TimeSeriesData.objects.filter(
             symbol=db_symbol
         ).count()
-    visible_candles = min(session.result.get('visible_candles', len(chart_data_dict)), total_candles)
+
+    visible_candles = min(session.result.get('visible_candles', len(minute_candles)), total_candles)
     session_total_candles = session.result.get('total_candles', total_candles)
+
+    data_points = len(minute_candles)
+    date_range_days = (df.index.max() - df.index.min()).days
+    data_warning = None
+    if date_range_days > 5 and data_points > 50000:
+        data_warning = f"Duży zbiór danych ({data_points:,} punktów). Niektóre timeframe'y zostały automatycznie zagregowane dla lepszej wydajności."
+
     context = {
         'display_symbol': symbol,
-        'chart_data': json.dumps({'1h': chart_data_dict}),  
+        'chart_data': json.dumps(timeframes),
         'start_date': start_date,
         'end_date': end_date,
         'session_id': session.id,
@@ -421,7 +474,8 @@ def chart_from_session(request, session_id):
         'current_candle': json.dumps(session.result.get('current_candle', {})),
         'account_state': session.account_state,
         'session_name': session.name,
-    'session_balance': session.account_state.get('balance', 100000),
+        'session_balance': session.account_state.get('balance', 100000),
+        'data_warning': data_warning
     }
 
     return render(request, 'backtest_app/lightweight_chart.html', context)

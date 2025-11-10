@@ -90,7 +90,7 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
             font-weight: bold;
             color: #007bff;">
             <span class="material-symbols-outlined" style="vertical-align:middle; font-size:22px; color:#007bff;">account_balance_wallet</span>
-            {{ session_balance|intcomma }} 
+            {{ session_balance|floatformat:"0" | intcomma }} 
         </div>
         {% endif %}
         <div id="bar-replay-controls" style="display: flex; gap: 10px; align-items: center;">
@@ -192,6 +192,7 @@ html, body { height:100%; margin:0; padding:0; overflow:hidden; }
     window.session_id = "{{ session_id|default:'' }}"; 
     window.session_name = "{{ session_name|default:'' }}";
     window.session_balance = {{ session_balance|default:100000 }};
+    window.chartData = JSON.parse('{{ chart_data|escapejs }}');
 </script>
 <script type="module" src="{% static 'backtest_app/js/main.js' %}"></script>
 {% endblock %}
